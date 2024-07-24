@@ -128,4 +128,14 @@ function Gather-FileInfo {
     }
 }
 
+function Compare-Files {
+    Gather-FileInfo
+        # Read the file line by line
+        foreach ($Line in $mainStorages) {
+            $drive = $Line.TrimEnd(":")  # Remove the colon from the drive letter
+            $hashFile = "$drive-Hashes.json"
+            $hashFilePath = ".\logs\$hashFile"
+        }
+}
+
 Compare-Files
