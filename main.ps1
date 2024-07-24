@@ -97,10 +97,8 @@ function Get-FilesInfo {
 
     return $fileInfo
 }
-
-function Compare-Files {
-    $mainStorages = Get-Content -Path .\config\main-storages.txt
-
+$mainStorages = Get-Content -Path .\config\main-storages.txt
+function Gather-FileInfo {
     # Read the file line by line
     foreach ($Line in $mainStorages) {
         $drive = $Line.TrimEnd(":")  # Remove the colon from the drive letter
