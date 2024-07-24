@@ -76,79 +76,58 @@ Additional Steps:
     }
 }
 
+function Get-FilesInfo {
+    param (
+        [string]$hashYN,
+        [string]$file,
+        [string]$Line
+    )
+
+    $hash = if ($hashYN -eq "Y") { Get-FileHash -Path $file -Algorithm SHA256 | Select-Object -ExpandProperty Hash } else { "" }
+    $relativePath = $file.Substring($Line.Length)
+    $lastModificationTime = (Get-Item $file).LastWriteTime
+    $fileLength = (Get-Item $file).Length
+
+    $fileInfo = @{
+        Hash = $hash
+        RelativePath = $relativePath
+        LastModificationTime = $lastModificationTime
+        Length = $fileLength
+    }
+
+    return $fileInfo
+}
+
 function Compare-Files {
     $mainStorages = Get-Content -Path .\config\main-storages.txt
+
     # Read the file line by line
-    ForEach ($Line in $mainStorages) {
+    foreach ($Line in $mainStorages) {
         $drive = $Line.TrimEnd(":")  # Remove the colon from the drive letter
-        $hashFile = "$drive-Hashes.csv"
+        $hashFile = "$drive-Hashes.json"
         $hashFilePath = ".\logs\$hashFile"
-        
-        if (Test-Path -path $hashFilePath -PathType Leaf) {
+
+        if (Test-Path -Path $hashFilePath -PathType Leaf) {
             Write-Host "The file exists: $hashFilePath" -ForegroundColor Green
-<#             $fileData = Import-Csv -Path $hashFilePath
-            
-            # Create a hashtable to store existing file data for quick lookup
-            $existingFiles = @{}
-            foreach ($item in $fileData) {
-                $existingFiles[$item.RelativePath] = $item
-            } #>
-        }
-        else {
+        } else {
             Write-Host "Hash file not found: $hashFilePath. Creating new hashes..." -ForegroundColor Yellow
             # Create directory for logs if it doesn't exist
             if (!(Test-Path -Path .\logs -PathType Container)) {
                 New-Item -ItemType Directory -Path .\logs
             }
-            # Write CSV header
-            "Hash,RelativePath,LastModificationTime,Length" | Out-File -FilePath $hashFilePath -Encoding utf8
+            # Initialize an array to hold file info
+            $fileInfos = @()
             # Get all files in the drive
             $files = Get-ChildItem -Path "$Line\" -Recurse -File
             foreach ($file in $files) {
-                $csvLine = Get-FilesInfo("Y", $file)
-                # Append the line to the CSV file
-                Add-Content -Path $hashFilePath -Value $csvLine
+                $fileInfo = Get-FilesInfo -hashYN "Y" -file $file -Line $Line
+                $fileInfos += $fileInfo
             }
+            # Convert the array to JSON and write to the file
+            $fileInfos | ConvertTo-Json | Out-File -FilePath $hashFilePath -Encoding utf8
             Write-Host "Hash file created: $hashFilePath" -ForegroundColor Green
         }
-        # No matter if the logs files existed or not we can begin the second part of comparing files for transfer here
-        if (Test-Path -path $hashFilePath -PathType Leaf) {
-            Write-Host "Copying $hashFilePath into a hashtable" -ForegroundColor Green
-            $fileData = Import-Csv -Path $hashFilePath
-            
-            # Create a hashtable to store existing file data for quick lookup
-            $existingFiles = @{}
-            foreach ($item in $fileData) {
-                $existingFiles[$item.RelativePath] = $item
-            }
-            #Write-Output $existingFiles
-            
-            # Run Get-FilesInfo with param set to "N"
-            foreach ($file in $files) {
-                $csvLine = Get-FilesInfo("N", $file)
-                # Append the line to the CSV file
-                Add-Content -Path $hashFilePath -Value $csvLine
-            }
-        }
     }
-}
-function Get-FilesInfo {
-    param ($hashYN, $filename)
-    if ($hashYN -eq "Y") {
-        # Compute the MD5 hash
-        $hash = (Get-FileHash -Algorithm MD5 -Path $file.FullName).Hash
-    }
-    # Create the relative path
-    $relativePath = $file.FullName.Substring($Line.Length + 1)
-    # Get the file Last Modification Time
-    $lastModificationTime = $file.LastWriteTimeUtc
-    # Get the file length
-    $length = $file.Length
-    # Prepare the CSV line
-    $Line = "$hash,$relativePath,$lastModificationTime,$length"
-	
-    return $Line
 }
 
-#Pre-Operations
 Compare-Files
