@@ -86,13 +86,13 @@ function Compare-Files {
         
         if (Test-Path -path $hashFilePath -PathType Leaf) {
             Write-Host "The file exists: $hashFilePath" -ForegroundColor Green
-            $fileData = Import-Csv -Path $hashFilePath
+<#             $fileData = Import-Csv -Path $hashFilePath
             
             # Create a hashtable to store existing file data for quick lookup
             $existingFiles = @{}
             foreach ($item in $fileData) {
                 $existingFiles[$item.RelativePath] = $item
-            }
+            } #>
         }
         else {
             Write-Host "Hash file not found: $hashFilePath. Creating new hashes..." -ForegroundColor Yellow
@@ -112,7 +112,24 @@ function Compare-Files {
             Write-Host "Hash file created: $hashFilePath" -ForegroundColor Green
         }
         # No matter if the logs files existed or not we can begin the second part of comparing files for transfer here
-        
+        if (Test-Path -path $hashFilePath -PathType Leaf) {
+            Write-Host "Copying $hashFilePath into a hashtable" -ForegroundColor Green
+            $fileData = Import-Csv -Path $hashFilePath
+            
+            # Create a hashtable to store existing file data for quick lookup
+            $existingFiles = @{}
+            foreach ($item in $fileData) {
+                $existingFiles[$item.RelativePath] = $item
+            }
+            #Write-Output $existingFiles
+            
+            # Run Get-FilesInfo with param set to "N"
+            foreach ($file in $files) {
+                $csvLine = Get-FilesInfo("N", $file)
+                # Append the line to the CSV file
+                Add-Content -Path $hashFilePath -Value $csvLine
+            }
+        }
     }
 }
 function Get-FilesInfo {
