@@ -135,6 +135,23 @@ function Compare-Files {
             $drive = $Line.TrimEnd(":")  # Remove the colon from the drive letter
             $hashFile = "$drive-Hashes.json"
             $hashFilePath = ".\logs\$hashFile"
+
+            # Import the JSON file into a hashtable
+            $hashes = Get-Content -Path $hashFilePath | ConvertFrom-Json
+
+            # Initialize an empty hashtable
+            $fileInput = @{}
+            # Access the hashtable values
+            foreach ($fileInfo in $hashes) {
+                $relativePath = $fileInfo.RelativePath
+
+                # Create a new object excluding RelativePath
+                $fileInfoWithoutRelativePath = $fileInfo | Select-Object -Property * -ExcludeProperty RelativePath
+
+                # Add the item to the hashtable with RelativePath as the key
+                $fileInput[$relativePath] = $fileInfoWithoutRelativePath
+            }
+            Write-Output $fileInput
         }
 }
 
