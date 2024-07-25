@@ -113,46 +113,69 @@ function Gather-FileInfo {
             if (!(Test-Path -Path .\logs -PathType Container)) {
                 New-Item -ItemType Directory -Path .\logs
             }
-            # Initialize an array to hold file info
-            $fileInfos = @()
+            # Initialize a hashtable to hold file info
+            $fileInfos = @{}
+            
             # Get all files in the drive
             $files = Get-ChildItem -Path "$Line\" -Recurse -File
             foreach ($file in $files) {
                 $fileInfo = Get-FilesInfo -hashYN "Y" -file $file -Line $Line
-                $fileInfos += $fileInfo
+                $relativePath = $fileInfo.RelativePath
+            
+                # Create a new object excluding RelativePath
+                $fileInfoWithoutRelativePath = $fileInfo | Select-Object -Property * -ExcludeProperty RelativePath
+            
+                # Add the item to the hashtable with RelativePath as the key
+                $fileInfos[$relativePath] = $fileInfoWithoutRelativePath
             }
-            # Convert the array to JSON and write to the file
-            $fileInfos | ConvertTo-Json | Out-File -FilePath $hashFilePath -Encoding utf8
-            Write-Host "Hash file created: $hashFilePath" -ForegroundColor Green
+
+            ConvertTo-Json -InputObject $fileInfos | Out-File -FilePath $hashFilePath
+
+
         }
     }
 }
 
 function Compare-Files {
     Gather-FileInfo
-        # Read the file line by line
-        foreach ($Line in $mainStorages) {
-            $drive = $Line.TrimEnd(":")  # Remove the colon from the drive letter
-            $hashFile = "$drive-Hashes.json"
-            $hashFilePath = ".\logs\$hashFile"
+    foreach ($Line in $mainStorages) {
+        $drive = $Line.TrimEnd(":")  # Remove the colon from the drive letter
+        $hashFile = "$drive-Hashes.json"
+        $hashFilePath = ".\logs\$hashFile"
 
-            # Import the JSON file into a hashtable
-            $hashes = Get-Content -Path $hashFilePath | ConvertFrom-Json
-
-            # Initialize an empty hashtable
-            $fileInput = @{}
-            # Access the hashtable values
-            foreach ($fileInfo in $hashes) {
-                $relativePath = $fileInfo.RelativePath
-
-                # Create a new object excluding RelativePath
-                $fileInfoWithoutRelativePath = $fileInfo | Select-Object -Property * -ExcludeProperty RelativePath
-
-                # Add the item to the hashtable with RelativePath as the key
-                $fileInput[$relativePath] = $fileInfoWithoutRelativePath
-            }
-            Write-Output $fileInput
+        $infoFromFile = ConvertFrom-Json -InputObject (Get-Content -Path $hashFilePath -Raw) -AsHashtable
+        # Verify the content of the hashtable
+        
+        foreach ($key in $infoFromFile.Keys) {
+            #Write-Host "Content of the hashtable from file:" -BackgroundColor Green
+            Write-Host "Key: $key, Length: $($key.Length)"
+            $value = $infoFromFile[$key] | Format-List | Out-String
+            Write-Host "Value: $value"
         }
+        $infoFromDisk = @{}
+            
+        # Get all files in the drive
+        $files = Get-ChildItem -Path "$Line\" -Recurse -File
+        foreach ($file in $files) {
+            $fileInfo = Get-FilesInfo -hashYN "Y" -file $file -Line $Line
+            $relativePath = $fileInfo.RelativePath
+        
+            # Create a new object excluding RelativePath
+            $fileInfoWithoutRelativePath = $fileInfo | Select-Object -Property * -ExcludeProperty RelativePath
+        
+            # Add the item to the hashtable with RelativePath as the key
+            $infoFromDisk[$relativePath] = $fileInfoWithoutRelativePath
+    }
+    # Verify the content of the hashtable
+    Write-Host "Content of the hashtable from disk:" -BackgroundColor Red
+    foreach ($key in $infoFromDisk.Keys) {
+        #Write-Host "Content of the hashtable from disk:" -BackgroundColor Red
+        Write-Host "Key: $key, Length: $($key.Length)"
+        $value = $infoFromDisk[$key] | Format-List | Out-String
+        Write-Host "Value: $value"
+    }
+    }
+
 }
 
 Compare-Files
