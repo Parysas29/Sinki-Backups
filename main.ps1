@@ -46,7 +46,7 @@ Additional Steps:
     - Include version control for the script and associated files.
  #>
 
- function Pre-Operations {
+function Pre-Operations {
     $data = Import-Csv -Path .\config\pre-config.csv
     $globalSwitches = "--bwlimit 20M:2G --fast-list --multi-thread-streams 10 --delete-during -P"
 
@@ -89,10 +89,10 @@ function Get-FilesInfo {
     $fileLength = (Get-Item $file).Length
 
     $fileInfo = @{
-        Hash = $hash
-        RelativePath = $relativePath
+        Hash                 = $hash
+        RelativePath         = $relativePath
         LastModificationTime = $lastModificationTime
-        Length = $fileLength
+        Length               = $fileLength
     }
 
     return $fileInfo
@@ -107,7 +107,8 @@ function Gather-FileInfo {
 
         if (Test-Path -Path $hashFilePath -PathType Leaf) {
             Write-Host "The file exists: $hashFilePath" -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-Host "Hash file not found: $hashFilePath. Creating new hashes..." -ForegroundColor Yellow
             # Create directory for logs if it doesn't exist
             if (!(Test-Path -Path .\logs -PathType Container)) {
@@ -129,7 +130,7 @@ function Gather-FileInfo {
                 $fileInfos[$relativePath] = $fileInfoWithoutRelativePath
             }
 
-            ConvertTo-Json -InputObject $fileInfos | Out-File -FilePath $hashFilePath
+            ConvertTo-Json -Depth 10 -InputObject $fileInfos | Out-File -FilePath $hashFilePath -Encoding utf8
 
 
         }
@@ -143,39 +144,43 @@ function Compare-Files {
         $hashFile = "$drive-Hashes.json"
         $hashFilePath = ".\logs\$hashFile"
 
+        # Read the content of the hashtable from the file
         $infoFromFile = ConvertFrom-Json -InputObject (Get-Content -Path $hashFilePath -Raw) -AsHashtable
-        # Verify the content of the hashtable
-        
+
+        # Iterate through the hashtable to verify the structure
         foreach ($key in $infoFromFile.Keys) {
-            #Write-Host "Content of the hashtable from file:" -BackgroundColor Green
-            Write-Host "Key: $key, Length: $($key.Length)"
-            $value = $infoFromFile[$key] | Format-List | Out-String
-            Write-Host "Value: $value"
+            $value = $infoFromFile[$key]
+            #Write-Host "Key: $key"
         }
-        $infoFromDisk = @{}
-            
+
+        # Initialize a hashtable to hold file info from disk
+        $infoFromDisk = @{}  
         # Get all files in the drive
         $files = Get-ChildItem -Path "$Line\" -Recurse -File
         foreach ($file in $files) {
-            $fileInfo = Get-FilesInfo -hashYN "Y" -file $file -Line $Line
+            $fileInfo = Get-FilesInfo -hashYN "N" -file $file -Line $Line
             $relativePath = $fileInfo.RelativePath
-        
             # Create a new object excluding RelativePath
             $fileInfoWithoutRelativePath = $fileInfo | Select-Object -Property * -ExcludeProperty RelativePath
-        
             # Add the item to the hashtable with RelativePath as the key
             $infoFromDisk[$relativePath] = $fileInfoWithoutRelativePath
-    }
-    # Verify the content of the hashtable
-    Write-Host "Content of the hashtable from disk:" -BackgroundColor Red
-    foreach ($key in $infoFromDisk.Keys) {
-        #Write-Host "Content of the hashtable from disk:" -BackgroundColor Red
-        Write-Host "Key: $key, Length: $($key.Length)"
-        $value = $infoFromDisk[$key] | Format-List | Out-String
-        Write-Host "Value: $value"
-    }
-    }
+        }
+        # Verify the content of the hashtable
+        foreach ($key in $infoFromDisk.Keys) {
+            $value = $infoFromDisk[$key]
+            #Write-Host "Key Disk: $key"
+        }
+        # Compare the two hashtables
+        foreach ($key in $infoFromDisk.Keys) {
+            if ($infoFromFile.ContainsKey($key)) {
+                #Write-Host "Checking file: $key"
+                # Mark the file for deletion within the backup drive
+                $fileToDelete = Join-Path -Path $Line -ChildPath $key
+                Write-Host "Marking file for deletion: $fileToDelete"
+                # Perform the deletion operation here
+            }
 
+        }
+    }
 }
-
 Compare-Files
