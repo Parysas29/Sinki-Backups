@@ -97,19 +97,34 @@ function Get-FilesInfo {
 
     return $fileInfo
 }
-$mainStorages = Get-Content -Path .\config\main-storages.txt
+$mainStorages = Import-Csv -Path .\config\main-storages.csv
+
+function Process-Line {
+    param (
+        [string]$srcDir,
+        [string]$dstDir
+    )
+    
+    #Write-Host "Processing: $srcDir"  # Display the current line
+    #Write-Host "Processing: $dstDir"  # Display the current line
+    $manifest = "$($srcDir.Substring(0, 1))$(Split-Path -Path $srcDir -Leaf).manifest" -replace ' ', '_'
+    Write-Host "Manifest: $manifest"
+    $manifestFilePath = ".\logs\$manifest"
+    
+    return $manifestFilePath
+}
 function Gather-FileInfo {
     # Read the file line by line
     foreach ($Line in $mainStorages) {
-        $drive = $Line.TrimEnd(":")  # Remove the colon from the drive letter
-        $hashFile = "$drive-Hashes.json"
-        $hashFilePath = ".\logs\$hashFile"
+        $srcDir = $Line.src
+        $dstDir = $Line.dst
+        $manifestFilePath = Process-Line -srcDir $srcDir -dstDir $dstDir
 
-        if (Test-Path -Path $hashFilePath -PathType Leaf) {
-            Write-Host "The file exists: $hashFilePath" -ForegroundColor Green
+        if (Test-Path -Path $manifestFilePath -PathType Leaf) {
+            Write-Host "The file exists: $manifestFilePath" -ForegroundColor Green
         }
         else {
-            Write-Host "Hash file not found: $hashFilePath. Creating new hashes..." -ForegroundColor Yellow
+            Write-Host "manifest file not found: $manifestFilePath. Creating new manifest..." -ForegroundColor Yellow
             # Create directory for logs if it doesn't exist
             if (!(Test-Path -Path .\logs -PathType Container)) {
                 New-Item -ItemType Directory -Path .\logs
@@ -118,19 +133,26 @@ function Gather-FileInfo {
             $fileInfos = @{}
             
             # Get all files in the drive
-            $files = Get-ChildItem -Path "$Line\" -Recurse -File
+            $files = Get-ChildItem -Path "$srcDir\" -Recurse -File
             foreach ($file in $files) {
+                Write-Host "Processing file: $file"
                 $fileInfo = Get-FilesInfo -hashYN "Y" -file $file -Line $Line
-                $relativePath = $fileInfo.RelativePath
-            
+                Write-Host "File Info: $fileInfo"
+                
+                # Get the full path of the file
+                $fullPath = (Get-Item $file).FullName
+                
+                # Modify the relative path to include the desired path structure
+                $relativePath = $fullPath.Substring($srcDir.Length).TrimStart('\')
+                
                 # Create a new object excluding RelativePath
                 $fileInfoWithoutRelativePath = $fileInfo | Select-Object -Property * -ExcludeProperty RelativePath
-            
-                # Add the item to the hashtable with RelativePath as the key
+                
+                # Add the item to the hashtable with the modified RelativePath as the key
                 $fileInfos[$relativePath] = $fileInfoWithoutRelativePath
             }
 
-            ConvertTo-Json -Depth 10 -InputObject $fileInfos | Out-File -FilePath $hashFilePath -Encoding utf8
+            ConvertTo-Json -Depth 10 -InputObject $fileInfos | Out-File -FilePath $manifestFilePath -Encoding utf8
 
 
         }
@@ -140,12 +162,12 @@ function Gather-FileInfo {
 function Compare-Files {
     Gather-FileInfo
     foreach ($Line in $mainStorages) {
-        $drive = $Line.TrimEnd(":")  # Remove the colon from the drive letter
-        $hashFile = "$drive-Hashes.json"
-        $hashFilePath = ".\logs\$hashFile"
+        $srcDir = $Line.src
+        $dstDir = $Line.dst
+        $manifestFilePath = Process-Line -srcDir $srcDir -dstDir $dstDir
 
         # Read the content of the hashtable from the file
-        $infoFromFile = ConvertFrom-Json -InputObject (Get-Content -Path $hashFilePath -Raw) -AsHashtable
+        $infoFromFile = ConvertFrom-Json -InputObject (Get-Content -Path $manifestFilePath -Raw) -AsHashtable
 
         # Iterate through the hashtable to verify the structure
         foreach ($key in $infoFromFile.Keys) {
@@ -156,7 +178,7 @@ function Compare-Files {
         # Initialize a hashtable to hold file info from disk
         $infoFromDisk = @{}  
         # Get all files in the drive
-        $files = Get-ChildItem -Path "$Line\" -Recurse -File
+        #$files = Get-ChildItem -Path "$Line\" -Recurse -File
         foreach ($file in $files) {
             $fileInfo = Get-FilesInfo -hashYN "N" -file $file -Line $Line
             $relativePath = $fileInfo.RelativePath
@@ -172,6 +194,7 @@ function Compare-Files {
         }
         # Compare the two hashtables
         foreach ($key in $infoFromDisk.Keys) {
+            # Here is where I will add my logic to mark a file as deleted, added, or modified
             if ($infoFromFile.ContainsKey($key)) {
                 #Write-Host "Checking file: $key"
                 # Mark the file for deletion within the backup drive
