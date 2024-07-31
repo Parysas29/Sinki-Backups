@@ -101,24 +101,83 @@ $mainStorages = Import-Csv -Path .\config\main-storages.csv
 
 function Process-Line {
     param (
-        [string]$srcDir,
-        [string]$dstDir
+        [string]$srcDir
     )
-    
-    #Write-Host "Processing: $srcDir"  # Display the current line
-    #Write-Host "Processing: $dstDir"  # Display the current line
     $manifest = "$($srcDir.Substring(0, 1))$(Split-Path -Path $srcDir -Leaf).manifest" -replace ' ', '_'
     Write-Host "Manifest: $manifest"
     $manifestFilePath = ".\logs\$manifest"
     
     return $manifestFilePath
 }
+
+function Add-Backup {
+    param (
+        [string]$file,
+        [string]$srcDir,
+        [string]$dstDir,
+        [string]$expectedHash,
+        [string]$logDir
+    )
+    
+    # Get the full path of the file
+    $fullPath = (Get-Item $file).FullName
+    
+    # Calculate the relative path
+    $relativePath = $fullPath.Substring($srcDir.Length).TrimStart('\')
+    
+    # Construct the destination path with the relative path
+    $destinationPath = Join-Path -Path $dstDir -ChildPath $relativePath
+    
+    # Ensure the destination directory exists
+    $destinationDir = Split-Path -Path $destinationPath -Parent
+    if (-not (Test-Path -Path $destinationDir)) {
+        New-Item -Path $destinationDir -ItemType Directory -Force
+    }
+    
+    $maxRetries = 3
+    $attempt = 0
+    $success = $false
+    
+    while ($attempt -lt $maxRetries -and -not $success) {
+        # Copy the file to the backup location
+        Copy-Item -Path $fullPath -Destination $destinationPath -Force
+        
+        # Verify the hash sum of the copied file
+        $copiedFileHash = Get-FileHash -Path $destinationPath -Algorithm SHA256
+        if ($copiedFileHash.Hash -eq $expectedHash) {
+            Write-Host "File copied and verified successfully: $file"
+            Start-Sleep -Milliseconds 25
+            # Compress the file using 7zip
+            $compressedFilePath = "$destinationPath.7z"
+            $cmd = "7z a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on $compressedFilePath"
+            Write-Host "Compressing file: $file"
+            Invoke-Expression $cmd
+            $success = $true
+        } else {
+            Write-Host "Hash mismatch for file: $file. Attempt $($attempt + 1) of $maxRetries."
+            $attempt++
+        }
+    }
+    
+    if (-not $success) {
+        # Log the failure
+        $logFilePath = Join-Path -Path $logDir -ChildPath "failed.log"
+        $logMessage = "Failed to copy and verify file: $file after $maxRetries attempts."
+        Add-Content -Path $logFilePath -Value $logMessage
+        Write-Error $logMessage
+    }
+
+    
+    return $destinationPath
+}
+
 function Gather-FileInfo {
     # Read the file line by line
     foreach ($Line in $mainStorages) {
         $srcDir = $Line.src
         $dstDir = $Line.dst
-        $manifestFilePath = Process-Line -srcDir $srcDir -dstDir $dstDir
+        $logDir = ".\logs"
+        $manifestFilePath = Process-Line -srcDir $srcDir
 
         if (Test-Path -Path $manifestFilePath -PathType Leaf) {
             Write-Host "The file exists: $manifestFilePath" -ForegroundColor Green
@@ -135,9 +194,9 @@ function Gather-FileInfo {
             # Get all files in the drive
             $files = Get-ChildItem -Path "$srcDir\" -Recurse -File
             foreach ($file in $files) {
-                Write-Host "Processing file: $file"
+                #Write-Host "Processing file: $file"
                 $fileInfo = Get-FilesInfo -hashYN "Y" -file $file -Line $Line
-                Write-Host "File Info: $fileInfo"
+
                 
                 # Get the full path of the file
                 $fullPath = (Get-Item $file).FullName
@@ -150,6 +209,10 @@ function Gather-FileInfo {
                 
                 # Add the item to the hashtable with the modified RelativePath as the key
                 $fileInfos[$relativePath] = $fileInfoWithoutRelativePath
+
+                # Call Add-Backup to move the file to the backup location
+                Add-Backup -file $file -srcDir $srcDir -dstDir $dstDir -expectedHash $fileInfo.Hash -logDir $logDir
+
             }
 
             ConvertTo-Json -Depth 10 -InputObject $fileInfos | Out-File -FilePath $manifestFilePath -Encoding utf8
@@ -161,15 +224,15 @@ function Gather-FileInfo {
 
 function Compare-Files {
     Gather-FileInfo
-    foreach ($Line in $mainStorages) {
+    foreach ($Line in $mainStorages) {     
         $srcDir = $Line.src
         $dstDir = $Line.dst
-        $manifestFilePath = Process-Line -srcDir $srcDir -dstDir $dstDir
+        $manifestFilePath = Process-Line -srcDir $srcDir
 
         # Read the content of the hashtable from the file
         $infoFromFile = ConvertFrom-Json -InputObject (Get-Content -Path $manifestFilePath -Raw) -AsHashtable
 
-        # Iterate through the hashtable to verify the structure
+        # Iterate through the hashtable to verif    y the structure
         foreach ($key in $infoFromFile.Keys) {
             $value = $infoFromFile[$key]
             #Write-Host "Key: $key"
