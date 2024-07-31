@@ -75,6 +75,7 @@ function Pre-Operations {
         }
     }
 }
+# Converted to GO
 
 function Get-FilesInfo {
     param (
