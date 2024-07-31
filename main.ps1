@@ -97,7 +97,7 @@ function Get-FilesInfo {
 
     return $fileInfo
 }
-$mainStorages = Import-Csv -Path .\config\main-storages.csv
+
 
 function Process-Line {
     param (
@@ -158,7 +158,8 @@ function Add-Backup {
             Write-Host "Compressing file: $file"
             Start-Process -FilePath $cmd -ArgumentList $zipargs -NoNewWindow -Wait
             $success = $true
-        } else {
+        }
+        else {
             Write-Host "Hash mismatch for file: $file. Attempt $($attempt + 1) of $maxRetries."
             $attempt++
         }
@@ -217,10 +218,10 @@ function Gather-FileInfo {
 
                 # Call Add-Backup to move the file to the backup location
                 Add-Backup -file $file -srcDir $srcDir -dstDir $dstDir -expectedHash $fileInfo.Hash -logDir $logDir
-
+                ConvertTo-Json -Depth 10 -InputObject $fileInfos | Out-File -FilePath $manifestFilePath -Encoding utf8
             }
 
-            ConvertTo-Json -Depth 10 -InputObject $fileInfos | Out-File -FilePath $manifestFilePath -Encoding utf8
+            
 
 
         }
@@ -274,4 +275,6 @@ function Compare-Files {
         }
     }
 }
+
+$mainStorages = Import-Csv -Path .\config\main-storages.csv
 Compare-Files
