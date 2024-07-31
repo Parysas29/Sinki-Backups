@@ -118,7 +118,11 @@ function Add-Backup {
         [string]$expectedHash,
         [string]$logDir
     )
-    
+    # Check if the path is a file
+    if (-not (Test-Path -Path $file -PathType Leaf)) {
+        Write-Host "Skipping directory: $file"
+        return
+    }
     # Get the full path of the file
     $fullPath = (Get-Item $file).FullName
     
@@ -149,9 +153,10 @@ function Add-Backup {
             Start-Sleep -Milliseconds 25
             # Compress the file using 7zip
             $compressedFilePath = "$destinationPath.7z"
-            $cmd = "7z a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on $compressedFilePath"
+            $cmd = "7z"
+            $zipargs = "a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on", "`"$compressedFilePath`"", "`"$destinationPath`""
             Write-Host "Compressing file: $file"
-            Invoke-Expression $cmd
+            Start-Process -FilePath $cmd -ArgumentList $zipargs -NoNewWindow -Wait
             $success = $true
         } else {
             Write-Host "Hash mismatch for file: $file. Attempt $($attempt + 1) of $maxRetries."
