@@ -256,17 +256,40 @@ func appendToFile(filePath, text string) error {
 	return err
 }
 
-func main() {
-	// Example usage
-	manifestFilePath := ProcessLine("C:\\example\\srcDir")
-	fmt.Println("Manifest File Path:", manifestFilePath)
+// copyFile copies a file from src to dst. If dst does not exist, it is created.
+func copyFile(src, dst string) error {
+	// Open the source file
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
 
 	destinationPath, err := AddBackup("C:\\example\\file.txt", "C:\\example\\srcDir", "C:\\example\\dstDir", "expectedHash", "C:\\example\\logDir")
+	// Create the destination file
+	destinationFile, err := os.Create(dst)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
 		fmt.Println("Destination Path:", destinationPath)
+		return err
 	}
+	defer destinationFile.Close()
+
+	// Copy the contents from source to destination
+	_, err = io.Copy(destinationFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	// Flush the contents to disk
+	err = destinationFile.Sync()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func main() {
 
