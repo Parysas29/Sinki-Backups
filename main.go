@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -119,7 +118,7 @@ type FileInfo struct {
 func GetFilesInfo(hashYN string, file string, line string) (FileInfo, error) {
 	var hash string
 	if hashYN == "Y" {
-		data, err := ioutil.ReadFile(file)
+		data, err := os.ReadFile(file)
 		if err != nil {
 			return FileInfo{}, err
 		}
@@ -230,6 +229,12 @@ func AddBackup(file, srcDir, dstDir, expectedHash, logDir string) (string, error
 	return destinationPath, nil
 }
 
+func GatherFileInfo(mainStorage []Storage) {
+	//  Read the file line by line
+	fmt.Println("This is me", mainStorage)
+
+}
+
 func getFileHash(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -287,7 +292,47 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
-func main() {
+type Storage struct {
+	Src string
+	Dst string
+}
 
-	PreOperations()
+func readCSV(filePath string) ([]Storage, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var storages []Storage
+	for _, record := range records {
+		storages = append(storages, Storage{
+			Src: record[0],
+			Dst: record[1],
+		})
+	}
+
+	return storages, nil
+}
+
+func main() {
+	filePath := "./config/main-storages.csv"
+	mainStorage, err := readCSV(filePath)
+	if err != nil {
+		log.Fatalf("Error reading CSV file: %v", err)
+	}
+	fmt.Print(mainStorage)
+	GatherFileInfo(mainStorage)
+	//GatherFileInfo(mainStorage)
+
+	for _, mainStorages := range mainStorage {
+		log.Printf("Src: %s, Dst: %s", mainStorages.Src, mainStorages.Dst)
+	}
+
 }
