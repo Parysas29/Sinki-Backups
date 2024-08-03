@@ -265,13 +265,9 @@ func copyFile(src, dst string) error {
 	}
 	defer sourceFile.Close()
 
-	destinationPath, err := AddBackup("C:\\example\\file.txt", "C:\\example\\srcDir", "C:\\example\\dstDir", "expectedHash", "C:\\example\\logDir")
 	// Create the destination file
 	destinationFile, err := os.Create(dst)
 	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("Destination Path:", destinationPath)
 		return err
 	}
 	defer destinationFile.Close()
