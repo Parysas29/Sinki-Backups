@@ -39,6 +39,9 @@ func PreOperations() {
 		log.Fatal("Error reading CSV header:", err)
 	}
 
+	// Define common arguments for rclone sync operations
+	commonSyncArgs := []string{"--bwlimit=20M:2G", "--fast-list", "--multi-thread-streams=10", "--delete-during", "-P"}
+
 	for {
 		// read each record from csv
 		record, err := csvReader.Read()
@@ -68,14 +71,18 @@ func PreOperations() {
 			}
 		case "rclone-sync-google":
 			args = append(args, "sync", "--drive-acknowledge-abuse")
+			args = append(args, commonSyncArgs...)
+			fmt.Println("this is the variable args:", args)
 			if op.SourceDir != "" {
 				args = append(args, op.SourceDir)
 			}
 			if op.DestDir != "" {
 				args = append(args, op.DestDir)
 			}
+			fmt.Println("this is the variable args:", args)
 		case "rclone-sync-onedrive":
 			args = append(args, "sync", "--onedrive-delta")
+			args = append(args, commonSyncArgs...)
 			if op.SourceDir != "" {
 				args = append(args, op.SourceDir)
 			}
@@ -86,6 +93,9 @@ func PreOperations() {
 			log.Printf("Unknown operation: %s", op.Type)
 			continue
 		}
+
+		// Print the args variable and the message
+		fmt.Println("this is the variable args:", args)
 
 		// Execute the command
 		cmd := exec.Command("rclone", args...)
@@ -257,4 +267,8 @@ func main() {
 	} else {
 		fmt.Println("Destination Path:", destinationPath)
 	}
+
+func main() {
+
+	PreOperations()
 }
