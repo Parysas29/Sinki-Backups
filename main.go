@@ -21,6 +21,18 @@ type Operation struct {
 	DestDir   string
 }
 
+type Storage struct {
+	Src string
+	Dst string
+}
+
+type FileInfo struct {
+	RelativePath string    `json:"relative_path"`
+	Size         int64     `json:"size"`
+	ModTime      time.Time `json:"mod_time"`
+	Hash         string    `json:"hash"`
+}
+
 func PreOperations() {
 	// open file
 	f, err := os.Open("./config/pre-operations.csv")
@@ -108,13 +120,6 @@ func PreOperations() {
 	}
 }
 
-type FileInfo struct {
-	Hash                 string
-	RelativePath         string
-	LastModificationTime time.Time
-	Length               int64
-}
-
 func GetFilesInfo(hashYN string, file string, line string) (FileInfo, error) {
 	var hash string
 	if hashYN == "Y" {
@@ -133,10 +138,10 @@ func GetFilesInfo(hashYN string, file string, line string) (FileInfo, error) {
 	}
 
 	return FileInfo{
-		Hash:                 hash,
-		RelativePath:         relativePath,
-		LastModificationTime: fileInfo.ModTime(),
-		Length:               fileInfo.Size(),
+		Hash:         hash,
+		RelativePath: relativePath,
+		ModTime:      fileInfo.ModTime(),
+		Size:         fileInfo.Size(),
 	}, nil
 }
 
@@ -230,9 +235,31 @@ func AddBackup(file, srcDir, dstDir, expectedHash, logDir string) (string, error
 }
 
 func GatherFileInfo(mainStorage []Storage) {
-	//  Read the file line by line
+	if len(mainStorage) == 0 {
+		fmt.Println("No data to process")
+		return
+	}
+
 	fmt.Println("This is me", mainStorage)
 
+	for _, storage := range mainStorage[1:] {
+		src := storage.Src
+		dst := storage.Dst
+		fmt.Println("Source inside GatherFileInfo", src)
+		fmt.Println("Destination inside GatherFileInfo", dst)
+
+		base := filepath.Base(src)
+		manifestFileName := base + ".manifest"
+		manifestFilePath := filepath.Join("./logs", manifestFileName)
+
+		if _, err := os.Stat(manifestFilePath); os.IsNotExist(err) {
+			fmt.Printf("Manifest file does not exist: %s\n", manifestFilePath)
+			// Create the manifest file
+			fmt.Printf("Manifest file created: %s\n", manifestFilePath)
+		} else {
+			fmt.Printf("Manifest file exists: %s\n", manifestFilePath)
+		}
+	}
 }
 
 func getFileHash(filePath string) (string, error) {
@@ -292,11 +319,6 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
-type Storage struct {
-	Src string
-	Dst string
-}
-
 func readCSV(filePath string) ([]Storage, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -327,9 +349,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading CSV file: %v", err)
 	}
-	fmt.Print(mainStorage)
+	//fmt.Print("mainStorage var in main", mainStorage)
 	GatherFileInfo(mainStorage)
-	//GatherFileInfo(mainStorage)
 
 	for _, mainStorages := range mainStorage {
 		log.Printf("Src: %s, Dst: %s", mainStorages.Src, mainStorages.Dst)
