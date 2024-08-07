@@ -75,7 +75,6 @@ function Pre-Operations {
         }
     }
 }
-# Converted to GO
 
 function Get-FilesInfo {
     param (
@@ -139,11 +138,11 @@ function Add-Backup {
         New-Item -Path $destinationDir -ItemType Directory -Force
     }
     
-    <# $maxRetries = 3
+    $maxRetries = 3
     $attempt = 0
-    $success = $false #> #>
+    $success = $false
     Copy-Item -Path $fullPath -Destination $destinationPath -Force
-<#     while ($attempt -lt $maxRetries -and -not $success) {
+    while ($attempt -lt $maxRetries -and -not $success) {
         # Copy the file to the backup location
         Copy-Item -Path $fullPath -Destination $destinationPath -Force
         
@@ -152,19 +151,28 @@ function Add-Backup {
         if ($copiedFileHash.Hash -eq $expectedHash) {
             Write-Host "File copied and verified successfully: $file"
             Start-Sleep -Milliseconds 25
-            # Compress the file using 7zip
-            $compressedFilePath = "$destinationPath.7z"
-            $cmd = "7z"
-            $zipargs = "a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on", "`"$compressedFilePath`"", "`"$destinationPath`""
-            Write-Host "Compressing file: $file"
-            Start-Process -FilePath $cmd -ArgumentList $zipargs -NoNewWindow -Wait
+
             $success = $true 
         }
         else {
             Write-Host "Hash mismatch for file: $file. Attempt $($attempt + 1) of $maxRetries."
             $attempt++
         }
-    } #>
+    }
+    if ($success) {
+        # Run additional code here if $success is true
+            # Compress the file using 7zip
+            $compressedFilePath = "$destinationPath.7z"
+            $cmd = "7z"
+            $zipargs = "a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on", "`"$compressedFilePath`"", "`"$destinationPath`""
+            Write-Host "Compressing file: $file"
+            Start-Process -FilePath $cmd -ArgumentList $zipargs -NoNewWindow -Wait
+    } else {
+        # Run additional code here if $success is false
+        # For example:
+        # Write-Host "Backup operation failed!"
+        # Send-Notification -Message "Backup operation failed!"
+    }
     
     if (-not $success) {
         # Log the failure
@@ -217,7 +225,7 @@ function Get-FileInfo {
                 $fileInfos[$relativePath] = $fileInfoWithoutRelativePath
 
                 # Call Add-Backup to move the file to the backup location
-                #Add-Backup -file $file -srcDir $srcDir -dstDir $dstDir -expectedHash $fileInfo.Hash -logDir $logDir
+                Add-Backup -file $file -srcDir $srcDir -dstDir $dstDir -expectedHash $fileInfo.Hash -logDir $logDir
                 ConvertTo-Json -Depth 10 -InputObject $fileInfos | Out-File -FilePath $manifestFilePath -Encoding utf8
             }
         }
