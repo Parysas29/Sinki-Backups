@@ -139,11 +139,11 @@ function Add-Backup {
         New-Item -Path $destinationDir -ItemType Directory -Force
     }
     
-    $maxRetries = 3
+    <# $maxRetries = 3
     $attempt = 0
-    $success = $false
-    
-    while ($attempt -lt $maxRetries -and -not $success) {
+    $success = $false #> #>
+    Copy-Item -Path $fullPath -Destination $destinationPath -Force
+<#     while ($attempt -lt $maxRetries -and -not $success) {
         # Copy the file to the backup location
         Copy-Item -Path $fullPath -Destination $destinationPath -Force
         
@@ -158,13 +158,13 @@ function Add-Backup {
             $zipargs = "a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on", "`"$compressedFilePath`"", "`"$destinationPath`""
             Write-Host "Compressing file: $file"
             Start-Process -FilePath $cmd -ArgumentList $zipargs -NoNewWindow -Wait
-            $success = $true
+            $success = $true 
         }
         else {
             Write-Host "Hash mismatch for file: $file. Attempt $($attempt + 1) of $maxRetries."
             $attempt++
         }
-    }
+    } #>
     
     if (-not $success) {
         # Log the failure
@@ -177,8 +177,8 @@ function Add-Backup {
     
     return $destinationPath
 }
-
-function Gather-FileInfo {
+$fileInfos = @{}
+function Get-FileInfo {
     # Read the file line by line
     foreach ($Line in $mainStorages) {
         $srcDir = $Line.src
@@ -204,7 +204,6 @@ function Gather-FileInfo {
                 #Write-Host "Processing file: $file"
                 $fileInfo = Get-FilesInfo -hashYN "Y" -file $file -Line $Line
 
-                
                 # Get the full path of the file
                 $fullPath = (Get-Item $file).FullName
                 
@@ -218,19 +217,15 @@ function Gather-FileInfo {
                 $fileInfos[$relativePath] = $fileInfoWithoutRelativePath
 
                 # Call Add-Backup to move the file to the backup location
-                Add-Backup -file $file -srcDir $srcDir -dstDir $dstDir -expectedHash $fileInfo.Hash -logDir $logDir
+                #Add-Backup -file $file -srcDir $srcDir -dstDir $dstDir -expectedHash $fileInfo.Hash -logDir $logDir
                 ConvertTo-Json -Depth 10 -InputObject $fileInfos | Out-File -FilePath $manifestFilePath -Encoding utf8
             }
-
-            
-
-
         }
     }
 }
 
 function Compare-Files {
-    Gather-FileInfo
+    Get-FileInfo
     foreach ($Line in $mainStorages) {     
         $srcDir = $Line.src
         $dstDir = $Line.dst
