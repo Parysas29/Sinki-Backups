@@ -210,6 +210,25 @@ def initial_backup(src, dst, manifest_file_path):
         debug_print(f"File info: {file_info}")
         if file_info:
             file_info_list.append(file_info)
+            # Append file info to the manifest file
+            try:
+                # Read existing data from the JSON file
+                if os.path.exists(manifest_file_path):
+                    with open(manifest_file_path, mode='r') as manifest_file:
+                        existing_data = json.load(manifest_file)
+                else:
+                    existing_data = []
+            
+                # Append new file info to the existing data
+                existing_data.extend(file_info_list)
+            
+                # Write the updated data back to the JSON file
+                with open(manifest_file_path, mode='w') as manifest_file:
+                    json.dump(existing_data, manifest_file, indent=4)
+                
+                debug_print("File info appended to the manifest file.")
+            except Exception as e:
+                debug_print(f"An error occurred while writing to the manifest file: {e}")
 
 
 
