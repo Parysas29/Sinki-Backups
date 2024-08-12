@@ -242,7 +242,7 @@ function Compare-Files {
         # Read the content of the hashtable from the file
         $infoFromFile = ConvertFrom-Json -InputObject (Get-Content -Path $manifestFilePath -Raw) -AsHashtable
 
-        # Iterate through the hashtable to verif    y the structure
+        # Iterate through the hashtable to verify the structure
         foreach ($key in $infoFromFile.Keys) {
             $value = $infoFromFile[$key]
             #Write-Host "Key: $key"
