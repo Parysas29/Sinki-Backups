@@ -45,6 +45,7 @@ Additional Steps:
     - Include version control for the script and associated files.
  """
 import csv
+import shutil
 import subprocess
 import hashlib
 from datetime import datetime
@@ -120,14 +121,22 @@ def calculate_hash(file_path, algorithm='md5'):
         debug_print(f"An error occurred while calculating the hash for '{file_path}': {e}")
         return None
 
-def get_file_info(file_path, hash_algorithm='md5'):
+def get_file_info(file_path, hash_algorithm='md5', src_dir=None, dst_dir=None):
     try:
+        debug_print(f"Processing file: {file_path}")
         # Calculate hash
         file_hash = calculate_hash(file_path, hash_algorithm)
 
         # Get relative path
-        relative_path = os.path.relpath(file_path)
-        debug_print(f"Relative path from get_file_info: {relative_path}")
+        if src_dir:
+            relative_path = os.path.relpath(file_path, src_dir)
+            # Remove any ".." segments from the relative path
+            relative_path = os.path.normpath(relative_path).replace("..\\", "").replace("../", "")
+            relative_path = os.path.normpath("./" + relative_path)
+            debug_print(f"Relative path from get_file_info: {relative_path}")
+        else:
+            relative_path = os.path.relpath(file_path)
+            debug_print(f"Relative path from get_file_info: {relative_path}")
 
         # Get last modification time
         last_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
@@ -203,10 +212,12 @@ def initial_backup(src, dst, manifest_file_path):
         for file in files:
             file_path = os.path.join(root, file)
             file_list.append(file_path)
+            debug_print(f"File path added: {file_path}")    
     # Obtain File Info for storage in the manifest file
     file_info_list = []
     for file_path in file_list:
-        file_info = get_file_info(file_path, "md5")
+        debug_print(f"Processing file in for loop: {file_path}")
+        file_info = get_file_info(file_path, "md5", src)
         debug_print(f"File info: {file_info}")
         if file_info:
             file_info_list.append(file_info)
@@ -221,20 +232,48 @@ def initial_backup(src, dst, manifest_file_path):
             
                 # Append new file info to the existing data
                 existing_data.extend(file_info_list)
+
             
                 # Write the updated data back to the JSON file
                 with open(manifest_file_path, mode='w') as manifest_file:
                     json.dump(existing_data, manifest_file, indent=4)
-                
                 debug_print("File info appended to the manifest file.")
             except Exception as e:
                 debug_print(f"An error occurred while writing to the manifest file: {e}")
+        debug_print("Checking Input for add_backup:" + file_path +" | "+ dst +" | "+ file_info['RelativePath'])
+        add_backup(file_path, dst, file_info['RelativePath'], file_info['Hash'])
 
+def add_backup(src, dst, relative_path, file_hash):
 
+    #debug_print(f"Adding backup for file: {src}")
+    #debug_print(f"Destination directory: {dst}")
+    #debug_print(f"Relative path: {relative_path}")
+    # Combine dst and relative_path to get the destination file path
+    dst_file = os.path.join(dst, relative_path)
+    
+    # Check if the destination file already exists
+    if os.path.exists(dst_file):
+        debug_print(f"Destination file '{dst_file}' already exists.")
+        return
 
+    # Copy the source file to the destination directory
+    try:
+        for attempt in range(4):
+            shutil.copy2(src, dst_file)
+            debug_print(f"File copied to destination: {dst_file}")
 
-
-
+            # Verify the hash of the copied file
+            copied_hash = calculate_hash(dst_file)
+            if copied_hash == file_hash:
+                debug_print("Hash verification successful. File copied successfully.")
+                break
+            else:
+                debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
+    except Exception as e:
+        debug_print(f"An error occurred while copying the file: {e}")
+    # Now I need to add the compression bit and the encryption bit.
+    # As this function will be used throughout the script
+    # I am going to create a new function for this.
 
 
 
