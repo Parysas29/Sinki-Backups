@@ -56,6 +56,13 @@ import json
 DEBUG = True  # Set this to False to disable debug messages
 
 def debug_print(message):
+    log_file_path = "./debug.log"  # Specify the path to your log file
+
+    # Write the message to the log file
+    with open(log_file_path, "a") as log_file:
+        log_file.write(message + "\n")
+
+    # Print the message to the console if DEBUG is True
     if DEBUG:
         print(message)
 
@@ -242,10 +249,15 @@ def initial_backup(src, dst, manifest_file_path):
             except Exception as e:
                 debug_print(f"An error occurred while writing to the manifest file: {e}")
         debug_print("Checking Input for add_backup:" + file_path +" | "+ dst +" | "+ file_info['RelativePath'])
-        add_backup(file_path, dst, file_info['RelativePath'], file_info['Hash'])
+        add_backup(file_path, dst, file_info['RelativePath'], file_info['Hash'], file_info['Length'])
 
+def calculate_chunked_hash(file_stream, chunk_size=4096):
+    hash_func = hashlib.md5()  # You can use any hash function like md5, sha256, etc.
+    for chunk in iter(lambda: file_stream.read(chunk_size), b""):
+        hash_func.update(chunk)
+    return hash_func.hexdigest()
 
-def add_backup(src, dst, relative_path, file_hash):
+def add_backup(src, dst, relative_path, file_hash, file_length):
     debug_print(f"Adding backup for file: {src}")
     debug_print(f"Destination directory: {dst}")
     debug_print(f"Relative path: {relative_path}")
@@ -281,19 +293,44 @@ def add_backup(src, dst, relative_path, file_hash):
                 debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
     except Exception as e:
         debug_print(f"An error occurred while copying the file: {e}")
+    
+    # Check the size of the file
+    debug_print(f"File size: {file_length} bytes")
+    if file_length >= 120:
+        for attempt in range(4):
+            try:
+                # Compress the file using LZMA
+                with open(dst_file, "rb") as f_in:
+                    with lzma.open(dst_file + ".xz", "wb", format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC64) as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                        # Close the compression stream
+                f_out.close()
+                debug_print(f"File compressed: {dst_file}.xz")
+            except Exception as e:
+                debug_print(f"An error occurred while compressing the file: {e}")
+                continue
 
-    try:
-        # Compress the file using LZMA
-        with open(dst_file, "rb") as f_in:
-            with lzma.open(dst_file + ".xz", "wb", format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC64) as f_out:
-                shutil.copyfileobj(f_in, f_out)
-        debug_print(f"File compressed successfully: {dst_file}.xz")
-    except Exception as e:
-        debug_print(f"An error occurred while compressing the file: {e}")
+            try:
+                # Decompress the file into memory with chunking to verify integrity
+                with open(dst_file + ".xz", "rb") as compressed_file:
+                    with lzma.open(compressed_file, "rb") as decompressed_file:
+                        # Calculate hash from decompressed data in chunks
+                        decompressed_hash = calculate_chunked_hash(decompressed_file)
 
-    # Now I need to add the compression bit and the encryption bit.
-    # As this function will be used throughout the script
-    # I am going to create a new function for this.
+                        # Compare the decompressed hash with the original file hash
+                        if decompressed_hash == file_hash:
+                            debug_print("Hash verification successful. Decompressed data matches the original file.")
+                            
+                            # Remove the original uncompressed file after successful compression
+                            os.remove(dst_file)
+                            debug_print(f"Original file removed: {dst_file}")
+                            break
+                        else:
+                            debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
+            except Exception as e:
+                debug_print(f"An error occurred while decompressing or verifying the file: {e}")
+    else:
+        debug_print("File size is less than 120 bytes. Skipping compression.")
 
 def main():
     pre_file_path = './config/pre-operations.csv'
