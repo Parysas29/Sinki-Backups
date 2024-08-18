@@ -51,6 +51,7 @@ import hashlib
 from datetime import datetime
 import os
 import json
+import gzip
 
 DEBUG = True  # Set this to False to disable debug messages
 
@@ -246,8 +247,8 @@ def initial_backup(src, dst, manifest_file_path):
 def add_backup(src, dst, relative_path, file_hash):
 
     #debug_print(f"Adding backup for file: {src}")
-    #debug_print(f"Destination directory: {dst}")
-    #debug_print(f"Relative path: {relative_path}")
+    debug_print(f"Destination directory: {dst}")
+    debug_print(f"Relative path: {relative_path}")
     # Combine dst and relative_path to get the destination file path
     dst_file = os.path.join(dst, relative_path)
     
@@ -271,6 +272,14 @@ def add_backup(src, dst, relative_path, file_hash):
                 debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
     except Exception as e:
         debug_print(f"An error occurred while copying the file: {e}")
+
+    try:
+        with open(dst_file, 'rb') as f_in:
+            with gzip.open(dst_file + '.gz', 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        debug_print(f"File compressed successfully: {dst_file}.gz")
+    except Exception as e:
+        debug_print(f"An error occurred while compressing the file: {e}")
     # Now I need to add the compression bit and the encryption bit.
     # As this function will be used throughout the script
     # I am going to create a new function for this.
