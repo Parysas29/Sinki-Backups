@@ -45,13 +45,13 @@ Additional Steps:
     - Include version control for the script and associated files.
  """
 import csv
+import lzma
 import shutil
 import subprocess
 import hashlib
 from datetime import datetime
 import os
 import json
-import gzip
 
 DEBUG = True  # Set this to False to disable debug messages
 
@@ -244,11 +244,12 @@ def initial_backup(src, dst, manifest_file_path):
         debug_print("Checking Input for add_backup:" + file_path +" | "+ dst +" | "+ file_info['RelativePath'])
         add_backup(file_path, dst, file_info['RelativePath'], file_info['Hash'])
 
-def add_backup(src, dst, relative_path, file_hash):
 
-    #debug_print(f"Adding backup for file: {src}")
+def add_backup(src, dst, relative_path, file_hash):
+    debug_print(f"Adding backup for file: {src}")
     debug_print(f"Destination directory: {dst}")
     debug_print(f"Relative path: {relative_path}")
+
     # Combine dst and relative_path to get the destination file path
     dst_file = os.path.join(dst, relative_path)
     
@@ -256,6 +257,14 @@ def add_backup(src, dst, relative_path, file_hash):
     if os.path.exists(dst_file):
         debug_print(f"Destination file '{dst_file}' already exists.")
         return
+
+    # Handle long paths by using the \\?\ prefix
+    if os.name == 'nt':
+        src = f"\\\\?\\{os.path.abspath(src)}"
+        dst_file = f"\\\\?\\{os.path.abspath(dst_file)}"
+
+    # Ensure the destination directory exists
+    os.makedirs(os.path.dirname(dst_file), exist_ok=True)
 
     # Copy the source file to the destination directory
     try:
@@ -274,18 +283,17 @@ def add_backup(src, dst, relative_path, file_hash):
         debug_print(f"An error occurred while copying the file: {e}")
 
     try:
-        with open(dst_file, 'rb') as f_in:
-            with gzip.open(dst_file + '.gz', 'wb') as f_out:
+        # Compress the file using LZMA
+        with open(dst_file, "rb") as f_in:
+            with lzma.open(dst_file + ".xz", "wb", format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC64) as f_out:
                 shutil.copyfileobj(f_in, f_out)
-        debug_print(f"File compressed successfully: {dst_file}.gz")
+        debug_print(f"File compressed successfully: {dst_file}.xz")
     except Exception as e:
         debug_print(f"An error occurred while compressing the file: {e}")
+
     # Now I need to add the compression bit and the encryption bit.
     # As this function will be used throughout the script
     # I am going to create a new function for this.
-
-
-
 
 def main():
     pre_file_path = './config/pre-operations.csv'
