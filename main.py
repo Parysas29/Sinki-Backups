@@ -346,7 +346,7 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
     else:
         debug_print("File size is less than 120 bytes or is a type that don't compress well. Skipping Compression.")
 
-
+    current_file_size = os.path.getsize(current_working_file)
     debug_print(f"Current file size: {current_file_size} bytes")
     if current_file_size > 4 * 1024 * 1024 * 1024:
         dst_file_dir = os.path.dirname(current_working_file)
