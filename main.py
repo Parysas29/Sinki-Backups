@@ -354,15 +354,10 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
             debug_print(f"Directory Path: {dst_file_dir}")
             split = Split(current_working_file, dst_file_dir)
             split.bysize(size=4 * 1024 * 1024 * 1024)
-            # Code to run if compressed_file_size is greater than 4GB
-            # ...
-            # ...
-            # ...
+            debug_print(f"File split into 4GB chunks: {current_working_file}")
         else:
-            print("File size is less than 4GB. Skipping splitting.")
-            # Code to run if compressed_file_size is not greater than 4GB
-            # ...
-            # ...
+            debug_print("File size is less than 4GB. Skipping splitting.")
+
     else:
         print("Compressed file does not exist. Skipping splitting.")
 
