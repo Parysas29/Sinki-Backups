@@ -295,7 +295,15 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
     
     # Check the size of the file
     debug_print(f"File size: {file_length} bytes")
-    if file_length >= 120:
+
+    # Compress the file if it meets the size and extension criteria
+    file_not_compress = ['jpeg', 'jpg', 'gif', 'png',
+                         'bmp', 'tiff', 'tif', 'avi',
+                         'mp4', 'avi', 'mpeg', 'mp3',
+                         'wav', 'flac', 'mkv', 'pdf',
+                         'zip', 'rar', '7z', 'gz',
+                         'tar', 'iso']
+    if file_length >= 120 and (file_ext not in file_not_compress or file_ext == '.'):
         for attempt in range(4):
             try:
                 # Compress the file using LZMA
