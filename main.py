@@ -52,6 +52,7 @@ import hashlib
 from datetime import datetime
 import os
 import json
+from filesplit.split import Split
 
 DEBUG = True  # Set this to False to disable debug messages
 
@@ -331,6 +332,21 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
                 debug_print(f"An error occurred while decompressing or verifying the file: {e}")
     else:
         debug_print("File size is less than 120 bytes. Skipping compression.")
+    # Get the size of the compressed file
+    compressed_file_size = os.path.getsize(dst_file + ".xz")
+    debug_print(f"Compressed file size: {compressed_file_size} bytes")
+    if compressed_file_size > 4 * 1024 * 1024 * 1024:
+        split = Split.bysize(inputfile=dst_file + ".xz", size=4 * 1024 * 1024 * 1024)
+        # Code to run if compressed_file_size is greater than 4GB
+        # ...
+        # ...
+        # ...
+    else:
+        print("File size is less than 4GB. Skipping splitting.")
+        # Code to run if compressed_file_size is not greater than 4GB
+        # ...
+        # ...
+        # ...
 
 def main():
     pre_file_path = './config/pre-operations.csv'
