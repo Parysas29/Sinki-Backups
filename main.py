@@ -281,43 +281,7 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
     # Copy the source file to the destination directory
     # Original code replaced with a call to the new function
     copy_current_file(src, dst_file, file_hash)
-
-    # Original code replaced with a call to the new function
-    compress_current_file(dst_file, file_length, file_hash)
- 
-
-    current_file_size = os.path.getsize(current_working_file)
-    debug_print(f"Current file size: {current_file_size} bytes")
-    if current_file_size > 4 * 1024 * 1024 * 1024:
-        dst_file_dir = os.path.dirname(current_working_file)
-        debug_print(f"Directory Path: {dst_file_dir}")
-        split = Split(current_working_file, dst_file_dir)
-        split.bysize(size=4 * 1024 * 1024 * 1024)
-        split.manfilename = os.path.basename(current_working_file) + ".man"
-        debug_print(f"File split into 4GB chunks: {current_working_file}")
-
-
-    else:
-        print("Compressed file does not exist. Skipping splitting.")
-
-def copy_current_file(src, dst_file, file_hash):
-    try:
-        for attempt in range(4):
-            shutil.copy2(src, dst_file)
-            debug_print(f"File copied to destination: {dst_file}")
-
-            # Verify the hash of the copied file
-            copied_hash = calculate_hash(dst_file)
-            if copied_hash == file_hash:
-                debug_print("Hash verification successful. File copied successfully.")
-                current_working_file = dst_file
-                break
-            else:
-                debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
-    except Exception as e:
-        debug_print(f"An error occurred while copying the file: {e}")
-
-def compress_current_file(dst_file, file_length, file_hash):
+    
     file_ext = os.path.splitext(dst_file)[1]
     if file_ext and not os.path.basename(dst_file).startswith('.'):
         # Remove the dot from the file extension
@@ -369,7 +333,36 @@ def compress_current_file(dst_file, file_length, file_hash):
     else:
         debug_print("File size is less than 120 bytes or is a type that don't compress well. Skipping Compression.")
 
+    current_file_size = os.path.getsize(current_working_file)
+    debug_print(f"Current file size: {current_file_size} bytes")
+    if current_file_size > 4 * 1024 * 1024 * 1024:
+        dst_file_dir = os.path.dirname(current_working_file)
+        debug_print(f"Directory Path: {dst_file_dir}")
+        split = Split(current_working_file, dst_file_dir)
+        split.bysize(size=4 * 1024 * 1024 * 1024)
+        split.manfilename = os.path.basename(current_working_file) + ".man"
+        debug_print(f"File split into 4GB chunks: {current_working_file}")
 
+
+    else:
+        print("Compressed file does not exist. Skipping splitting.")
+
+def copy_current_file(src, dst_file, file_hash):
+    try:
+        for attempt in range(4):
+            shutil.copy2(src, dst_file)
+            debug_print(f"File copied to destination: {dst_file}")
+
+            # Verify the hash of the copied file
+            copied_hash = calculate_hash(dst_file)
+            if copied_hash == file_hash:
+                debug_print("Hash verification successful. File copied successfully.")
+                current_working_file = dst_file
+                break
+            else:
+                debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
+    except Exception as e:
+        debug_print(f"An error occurred while copying the file: {e}")
 
 
 
