@@ -279,21 +279,8 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
 
     current_working_file = ""
     # Copy the source file to the destination directory
-    try:
-        for attempt in range(4):
-            shutil.copy2(src, dst_file)
-            debug_print(f"File copied to destination: {dst_file}")
-
-            # Verify the hash of the copied file
-            copied_hash = calculate_hash(dst_file)
-            if copied_hash == file_hash:
-                debug_print("Hash verification successful. File copied successfully.")
-                current_working_file = dst_file
-                break
-            else:
-                debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
-    except Exception as e:
-        debug_print(f"An error occurred while copying the file: {e}")
+    # Original code replaced with a call to the new function
+    copy_current_file(src, dst_file, file_hash)
     
     file_ext = os.path.splitext(dst_file)[1]
     if file_ext and not os.path.basename(dst_file).startswith('.'):
@@ -359,6 +346,25 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
 
     else:
         print("Compressed file does not exist. Skipping splitting.")
+
+def copy_current_file(src, dst_file, file_hash):
+    try:
+        for attempt in range(4):
+            shutil.copy2(src, dst_file)
+            debug_print(f"File copied to destination: {dst_file}")
+
+            # Verify the hash of the copied file
+            copied_hash = calculate_hash(dst_file)
+            if copied_hash == file_hash:
+                debug_print("Hash verification successful. File copied successfully.")
+                current_working_file = dst_file
+                break
+            else:
+                debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
+    except Exception as e:
+        debug_print(f"An error occurred while copying the file: {e}")
+
+
 
 def main():
     pre_file_path = './config/pre-operations.csv'
