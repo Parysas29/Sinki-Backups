@@ -160,7 +160,7 @@ def get_file_info(file_path, hash_algorithm='md5', src_dir=None, dst_dir=None):
             "Length": file_length
         }
     except Exception as e:
-        debug_print(f"An error occurred while processing the file '{file_path}': {e}")
+        debug_print(f"get_file_info fun: An error occurred while processing the file '{file_path}': {e}")
         return None
 
 def compare_files(file_path):
@@ -194,7 +194,7 @@ def compare_files(file_path):
 
 
     except Exception as e:
-        debug_print(f"An error occurred while processing the file '{file_path}': {e}")
+        debug_print(f"Compare_File Fun: An error occurred while processing the file '{file_path}': {e}")
     
 
 
