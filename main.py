@@ -280,15 +280,25 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
     current_working_file = ""
     # Copy the source file to the destination directory
     # Original code replaced with a call to the new function
-    copy_current_file(src, dst_file, file_hash, current_working_file)
+    copy_current_file(src, dst_file, file_hash)
 
     # Original code replaced with a call to the new function
-    compress_current_file(dst_file, file_length, file_hash, current_working_file)
-    
-    # Original code replaced with a call to the new function
-    split_current_file(current_working_file)
+    compress_current_file(dst_file, file_length, file_hash)
+ 
+
+    current_file_size = os.path.getsize(current_working_file)
+    debug_print(f"Current file size: {current_file_size} bytes")
+    if current_file_size > 4 * 1024 * 1024 * 1024:
+        dst_file_dir = os.path.dirname(current_working_file)
+        debug_print(f"Directory Path: {dst_file_dir}")
+        split = Split(current_working_file, dst_file_dir)
+        split.bysize(size=4 * 1024 * 1024 * 1024)
+        split.manfilename = os.path.basename(current_working_file) + ".man"
+        debug_print(f"File split into 4GB chunks: {current_working_file}")
 
 
+    else:
+        print("Compressed file does not exist. Skipping splitting.")
 
 def copy_current_file(src, dst_file, file_hash):
     try:
@@ -301,7 +311,7 @@ def copy_current_file(src, dst_file, file_hash):
             if copied_hash == file_hash:
                 debug_print("Hash verification successful. File copied successfully.")
                 current_working_file = dst_file
-                return current_working_file
+                break
             else:
                 debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
     except Exception as e:
@@ -351,29 +361,13 @@ def compress_current_file(dst_file, file_length, file_hash):
                             os.remove(dst_file)
                             debug_print(f"Original file removed: {dst_file}")
                             current_working_file = dst_file + ".xz"
-                            return current_working_file
+                            break
                         else:
                             debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
             except Exception as e:
                 debug_print(f"An error occurred while decompressing or verifying the file: {e}")
     else:
         debug_print("File size is less than 120 bytes or is a type that don't compress well. Skipping Compression.")
-
-def split_current_file(current_working_file):
-    current_file_size = os.path.getsize(current_working_file)
-    debug_print(f"Current file size: {current_file_size} bytes")
-    if current_file_size > 4 * 1024 * 1024 * 1024:
-        dst_file_dir = os.path.dirname(current_working_file)
-        debug_print(f"Directory Path: {dst_file_dir}")
-        split = Split(current_working_file, dst_file_dir)
-        split.bysize(size=4 * 1024 * 1024 * 1024)
-        split.manfilename = os.path.basename(current_working_file) + ".man"
-        debug_print(f"File split into 4GB chunks: {current_working_file}")
-    else:
-        print("Compressed file does not exist. Skipping splitting.")
-
-# Original code replaced with a call to the new function
-
 
 
 
