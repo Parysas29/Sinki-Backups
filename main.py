@@ -293,6 +293,13 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
     except Exception as e:
         debug_print(f"An error occurred while copying the file: {e}")
     
+    file_ext = os.path.splitext(dst_file)[1]
+    if file_ext and not os.path.basename(dst_file).startswith('.'):
+        # Remove the dot from the file extension
+        file_ext = file_ext[1:]
+    else:
+        # If no file extension exists or the file starts with a dot, store dst_file directly
+        file_ext = '.' if os.path.basename(dst_file).startswith('.') else "."
     # Check the size of the file
     debug_print(f"File size: {file_length} bytes")
 
