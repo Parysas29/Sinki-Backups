@@ -57,7 +57,7 @@ from filesplit.split import Split
 DEBUG = True  # Set this to False to disable debug messages
 
 def debug_print(message):
-    log_file_path = "./debug.log"  # Specify the path to your log file
+    log_file_path = "./logs/debug.log"  # Specify the path to your log file
 
     # Write the message to the log file
     with open(log_file_path, "a") as log_file:
@@ -325,6 +325,7 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
                             # Remove the original uncompressed file after successful compression
                             os.remove(dst_file)
                             debug_print(f"Original file removed: {dst_file}")
+                            current_working_file = dst_file + ".xz"
                             break
                         else:
                             debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
