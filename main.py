@@ -346,17 +346,16 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
     else:
         debug_print("File size is less than 120 bytes or is a type that don't compress well. Skipping Compression.")
 
-    if os.path.exists(current_working_file):
-        current_file_size = os.path.getsize(current_working_file)
-        debug_print(f"Current file size: {current_file_size} bytes")
-        if current_file_size > 4 * 1024 * 1024 * 1024:
-            dst_file_dir = os.path.dirname(current_working_file)
-            debug_print(f"Directory Path: {dst_file_dir}")
-            split = Split(current_working_file, dst_file_dir)
-            split.bysize(size=4 * 1024 * 1024 * 1024)
-            debug_print(f"File split into 4GB chunks: {current_working_file}")
-        else:
-            debug_print("File size is less than 4GB. Skipping splitting.")
+
+    debug_print(f"Current file size: {current_file_size} bytes")
+    if current_file_size > 4 * 1024 * 1024 * 1024:
+        dst_file_dir = os.path.dirname(current_working_file)
+        debug_print(f"Directory Path: {dst_file_dir}")
+        split = Split(current_working_file, dst_file_dir)
+        split.bysize(size=4 * 1024 * 1024 * 1024)
+        split.manfilename = os.path.basename(current_working_file) + ".man"
+        debug_print(f"File split into 4GB chunks: {current_working_file}")
+
 
     else:
         print("Compressed file does not exist. Skipping splitting.")
