@@ -277,6 +277,7 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
     # Ensure the destination directory exists
     os.makedirs(os.path.dirname(dst_file), exist_ok=True)
 
+    current_working_file = ""
     # Copy the source file to the destination directory
     try:
         for attempt in range(4):
@@ -287,6 +288,7 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
             copied_hash = calculate_hash(dst_file)
             if copied_hash == file_hash:
                 debug_print("Hash verification successful. File copied successfully.")
+                current_working_file = dst_file
                 break
             else:
                 debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
@@ -342,16 +344,25 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
             except Exception as e:
                 debug_print(f"An error occurred while decompressing or verifying the file: {e}")
     else:
-        debug_print("File size is less than 120 bytes. Skipping compression.")
-    # Get the size of the compressed file
-    compressed_file_size = os.path.getsize(dst_file + ".xz")
-    debug_print(f"Compressed file size: {compressed_file_size} bytes")
-    if compressed_file_size > 4 * 1024 * 1024 * 1024:
-        split = Split.bysize(inputfile=dst_file + ".xz", size=4 * 1024 * 1024 * 1024)
-        # Code to run if compressed_file_size is greater than 4GB
-        # ...
-        # ...
-        # ...
+        debug_print("File size is less than 120 bytes or is a type that don't compress well. Skipping Compression.")
+
+    if os.path.exists(current_working_file):
+        current_file_size = os.path.getsize(current_working_file)
+        debug_print(f"Current file size: {current_file_size} bytes")
+        if current_file_size > 4 * 1024 * 1024 * 1024:
+            dst_file_dir = os.path.dirname(current_working_file)
+            debug_print(f"Directory Path: {dst_file_dir}")
+            split = Split(current_working_file, dst_file_dir)
+            split.bysize(size=4 * 1024 * 1024 * 1024)
+            # Code to run if compressed_file_size is greater than 4GB
+            # ...
+            # ...
+            # ...
+        else:
+            print("File size is less than 4GB. Skipping splitting.")
+            # Code to run if compressed_file_size is not greater than 4GB
+            # ...
+            # ...
     else:
         print("File size is less than 4GB. Skipping splitting.")
         # Code to run if compressed_file_size is not greater than 4GB
