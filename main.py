@@ -191,8 +191,6 @@ def compare_files(file_path):
                     debug_print(f"No manifest file found for source directory: {src}")
                     # Start Initial Backup
                     initial_backup(src, dst, manifest_file_path)
-
-
     except Exception as e:
         debug_print(f"Compare_File Fun: An error occurred while processing the file '{file_path}': {e}")
     
@@ -310,18 +308,15 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
             except Exception as e:
                 debug_print(f"An error occurred while compressing the file: {e}")
                 continue
-
             try:
                 # Decompress the file into memory with chunking to verify integrity
                 with open(dst_file + ".xz", "rb") as compressed_file:
                     with lzma.open(compressed_file, "rb") as decompressed_file:
                         # Calculate hash from decompressed data in chunks
                         decompressed_hash = calculate_chunked_hash(decompressed_file)
-
                         # Compare the decompressed hash with the original file hash
                         if decompressed_hash == file_hash:
                             debug_print("Hash verification successful. Decompressed data matches the original file.")
-                            
                             # Remove the original uncompressed file after successful compression
                             os.remove(dst_file)
                             debug_print(f"Original file removed: {dst_file}")
