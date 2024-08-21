@@ -277,31 +277,48 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
     # Ensure the destination directory exists
     os.makedirs(os.path.dirname(dst_file), exist_ok=True)
 
-    current_working_file = ""
+
+    current_working_file = dst_file
+
+    copy_current_file(src, current_working_file, file_hash)
+
+    current_working_file = compress_current_file(current_working_file, file_hash, file_length)
+    debug_print(f"Returning from compress_current_file: {current_working_file}")
+
+    current_working_file = split_current_file(current_working_file)
+    debug_print(f"Returning from split_current_file: {current_working_file}")
+
+    encrypt_current_file(current_working_file)
+
+    return
+
+
+def copy_current_file(src, current_working_file, file_hash):
     # Copy the source file to the destination directory
     try:
         for attempt in range(4):
-            shutil.copy2(src, dst_file)
-            debug_print(f"File copied to destination: {dst_file}")
+            shutil.copy2(src, current_working_file)
+            debug_print(f"File copied to destination: {current_working_file}")
 
             # Verify the hash of the copied file
-            copied_hash = calculate_hash(dst_file)
+            copied_hash = calculate_hash(current_working_file)
             if copied_hash == file_hash:
                 debug_print("Hash verification successful. File copied successfully.")
-                current_working_file = dst_file
                 break
             else:
                 debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
     except Exception as e:
         debug_print(f"An error occurred while copying the file: {e}")
-    
-    file_ext = os.path.splitext(dst_file)[1]
-    if file_ext and not os.path.basename(dst_file).startswith('.'):
+    return
+
+def compress_current_file(current_working_file, file_hash, file_length):
+    file_ext = os.path.splitext(current_working_file)[1]
+    if file_ext and not os.path.basename(current_working_file).startswith('.'):
         # Remove the dot from the file extension
         file_ext = file_ext[1:]
     else:
-        # If no file extension exists or the file starts with a dot, store dst_file directly
-        file_ext = '.' if os.path.basename(dst_file).startswith('.') else "."
+        # If no file extension exists or the file starts with a dot, store current_working_file directly
+        file_ext = '.' if os.path.basename(current_working_file).startswith('.') else "."
     # Check the size of the file
     debug_print(f"File size: {file_length} bytes")
 
@@ -316,18 +333,19 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
         for attempt in range(4):
             try:
                 # Compress the file using LZMA
-                with open(dst_file, "rb") as f_in:
-                    with lzma.open(dst_file + ".xz", "wb", format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC64) as f_out:
+                with open(current_working_file, "rb") as f_in:
+                    with lzma.open(current_working_file + ".xz", "wb", format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC64) as f_out:
                         shutil.copyfileobj(f_in, f_out)
                         # Close the compression stream
-                f_out.close()
-                debug_print(f"File compressed: {dst_file}.xz")
+                    f_out.close()
+
+                    debug_print(f"File compressed: {current_working_file}")
             except Exception as e:
                 debug_print(f"An error occurred while compressing the file: {e}")
                 continue
             try:
                 # Decompress the file into memory with chunking to verify integrity
-                with open(dst_file + ".xz", "rb") as compressed_file:
+                with open(current_working_file + ".xz", "rb") as compressed_file:
                     with lzma.open(compressed_file, "rb") as decompressed_file:
                         # Calculate hash from decompressed data in chunks
                         decompressed_hash = calculate_chunked_hash(decompressed_file)
@@ -335,9 +353,9 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
                         if decompressed_hash == file_hash:
                             debug_print("Hash verification successful. Decompressed data matches the original file.")
                             # Remove the original uncompressed file after successful compression
-                            os.remove(dst_file)
-                            debug_print(f"Original file removed: {dst_file}")
-                            current_working_file = dst_file + ".xz"
+                            os.remove(current_working_file)
+                            debug_print(f"Original file removed: {current_working_file}")
+                            current_working_file = current_working_file + ".xz"
                             break
                         else:
                             debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
@@ -345,20 +363,24 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
                 debug_print(f"An error occurred while decompressing or verifying the file: {e}")
     else:
         debug_print("File size is less than 120 bytes or is a type that don't compress well. Skipping Compression.")
+    return current_working_file
 
+def split_current_file(current_working_file):
     current_file_size = os.path.getsize(current_working_file)
     debug_print(f"Current file size: {current_file_size} bytes")
     if current_file_size > 4 * 1024 * 1024 * 1024:
         dst_file_dir = os.path.dirname(current_working_file)
         debug_print(f"Directory Path: {dst_file_dir}")
         split = Split(current_working_file, dst_file_dir)
+        splitManfile = os.path.basename(current_working_file) + ".man"
+        debug_print(f"Split Manifest File: {splitManfile}")
+        split.manfilename = splitManfile
         split.bysize(size=4 * 1024 * 1024 * 1024)
-        split.manfilename = os.path.basename(current_working_file) + ".man"
+
         debug_print(f"File split into 4GB chunks: {current_working_file}")
-
-
     else:
         print("Compressed file does not exist. Skipping splitting.")
+    return current_working_file
 
 def main():
     pre_file_path = './config/pre-operations.csv'
