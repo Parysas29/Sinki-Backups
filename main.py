@@ -382,6 +382,45 @@ def split_current_file(current_working_file):
         print("Compressed file does not exist. Skipping splitting.")
     return current_working_file
 
+def prepare_files_for_encryption(current_working_file):
+    # Check if the .man file exists
+    man_file_path = current_working_file + ".man"
+    if os.path.exists(man_file_path):
+        debug_print(f"Manifest file '{man_file_path}' from the split command exist.")
+
+        # Read the contents of the .man file
+        with open(man_file_path, 'r') as man_file:
+            lines = man_file.readlines()
+
+        lines = lines[1:]  # Skip the first line (header)
+
+        filenames = [line.split(',')[0] for line in lines]
+        current_working_list = []
+        for filename in filenames:
+            debug_print(f"Current Value of filename: {filename}")
+            # Append the full file path to each filename
+            full_file_path = os.path.join(os.path.dirname(current_working_file), filename)
+            debug_print(f"Full file path as created by the split manifest file: {full_file_path}")
+            current_working_list.append(full_file_path)
+
+        # Append .man file also
+        current_working_list.append(man_file_path)
+
+        # Encrypt the files
+        for file in current_working_list:
+            encrypt_current_file(file)
+
+    else :
+        debug_print(f"No Manifest file found moving onto encryption.")
+        encrypt_current_file(current_working_file)
+
+    return
+
+def encrypt_current_file(current_working_file):
+    debug_print("encrypt_current_file: " + current_working_file)
+    return
+        
+
 def main():
     pre_file_path = './config/pre-operations.csv'
     #pre_operations(pre_file_path)
