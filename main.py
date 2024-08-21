@@ -385,8 +385,11 @@ def split_current_file(current_working_file):
 def main():
     pre_file_path = './config/pre-operations.csv'
     #pre_operations(pre_file_path)
-    operation_file_path = './config/backup-operations.csv'
-    compare_files(operation_file_path)
+    #operation_file_path = './config/backup-operations.csv'
+    #compare_files(operation_file_path)
+
+    current = os.path.normpath("A:\\test\\Vid\\homevid(1).mkv")
+    prepare_files_for_encryption(current)
 
 if __name__ == "__main__":
     main()
