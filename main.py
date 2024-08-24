@@ -81,15 +81,15 @@ def pre_operations(file_path):
             
             # Print the headers to debug
             headers = reader.fieldnames
-            debug_print(f"CSV Headers: {headers}")
+            debug_print(f"pre_operations: CSV Headers: {headers}")
             
             for row in reader:
                 # Print the current row to debug
-                debug_print(f"Current row: {row}")
+                debug_print(f"pre_operations: Current row: {row}")
                 
                 operation = row.get('operation')
                 if operation is None:
-                    debug_print("Error: 'operation' key not found in the row.")
+                    debug_print("pre_operations: Error: 'operation' key not found in the row.")
                     continue
                 
                 src = row.get('scr', '')
@@ -97,27 +97,27 @@ def pre_operations(file_path):
                 
                 if operation == "rclone-dedupe":
                     cmd = f"rclone dedupe rename {dst}"
-                    debug_print(f"Executing: {cmd}")
+                    debug_print(f"pre_operations: Executing: {cmd}")
                     subprocess.run(cmd, shell=True)
                 
                 elif operation == "rclone-sync-google":
                     local_switches = "--drive-acknowledge-abuse"
                     cmd = f"rclone sync {global_switches} {local_switches} {src} {dst}"
-                    debug_print(f"Executing: {cmd}")
+                    debug_print(f"pre_operations: Executing: {cmd}")
                     subprocess.run(cmd, shell=True)
                 
                 elif operation == "rclone-sync-onedrive":
                     local_switches = "--onedrive-delta"
                     cmd = f"rclone sync {global_switches} {local_switches} {src} {dst}"
-                    debug_print(f"Executing: {cmd}")
+                    debug_print(f"pre_operations: Executing: {cmd}")
                     subprocess.run(cmd, shell=True)
                 
                 else:
-                    debug_print(f"Unknown operation: {operation}")
+                    debug_print(f"pre_operations: Unknown operation: {operation}")
     except FileNotFoundError:
-        debug_print(f"Error: The file '{file_path}' was not found.")
+        debug_print(f"pre_operations: Error: The file '{file_path}' was not found.")
     except Exception as e:
-        debug_print(f"An unexpected error occurred: {e}")
+        debug_print(f"pre_operations: An unexpected error occurred: {e}")
 
 
 def calculate_hash(file_path, algorithm='md5'):
@@ -125,7 +125,7 @@ def calculate_hash(file_path, algorithm='md5'):
     try:
         # Check if the algorithm is supported
         if algorithm not in hashlib.algorithms_available:
-            raise ValueError(f"Unsupported hash algorithm: {algorithm}")
+            raise ValueError(f"calculate_hash: Unsupported hash algorithm: {algorithm}")
 
         hash_func = hashlib.new(algorithm)
         with open(file_path, "rb") as f:
@@ -133,13 +133,13 @@ def calculate_hash(file_path, algorithm='md5'):
                 hash_func.update(chunk)
         calculate_hash = hash_func.hexdigest()
     except Exception as e:
-        debug_print(f"An error occurred while calculating the hash for '{file_path}': {e}")
+        debug_print(f"calculate_hash: An error occurred while calculating the hash for '{file_path}': {e}")
         calculate_hash = hash_func.hexdigest()
     return calculate_hash
 
 def get_file_info(file_path, hash_algorithm='md5', src_dir=None, dst_dir=None):
     try:
-        debug_print(f"Processing file: {file_path}")
+        debug_print(f"get_file_info: Processing file: {file_path}")
         # Calculate hash
         file_hash = calculate_hash(file_path, hash_algorithm)
 
@@ -149,10 +149,10 @@ def get_file_info(file_path, hash_algorithm='md5', src_dir=None, dst_dir=None):
             # Remove any ".." segments from the relative path
             relative_path = os.path.normpath(relative_path).replace("..\\", "").replace("../", "")
             relative_path = os.path.normpath("./" + relative_path)
-            debug_print(f"Relative path from get_file_info: {relative_path}")
+            debug_print(f"get_file_info: Relative path from get_file_info: {relative_path}")
         else:
             relative_path = os.path.relpath(file_path)
-            debug_print(f"Relative path from get_file_info: {relative_path}")
+            debug_print(f"get_file_info: Relative path from get_file_info: {relative_path}")
 
         # Get last modification time
         last_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
@@ -168,7 +168,7 @@ def get_file_info(file_path, hash_algorithm='md5', src_dir=None, dst_dir=None):
         }
 
     except Exception as e:
-        debug_print(f"get_file_info fun: An error occurred while processing the file '{file_path}': {e}")
+        debug_print(f"get_file_info: An error occurred while processing the file '{file_path}': {e}")
         file_info = None
 
     return file_info
@@ -181,46 +181,46 @@ def compare_files(file_path):
             
             # Print the headers to debug
             headers = reader.fieldnames
-            debug_print(f"CSV Headers: {headers}")
+            debug_print(f"compare_files: CSV Headers: {headers}")
 
             for row in reader:
                 # Print the current row to debug
-                debug_print(f"Current row: {row}")
+                debug_print(f"compare_files: Current row: {row}")
             
                 src = row.get('src', '').strip()
                 dst = row.get('dst', '').strip()
-                debug_print(f"Source directory: {src}")
-                debug_print(f"Destination directory: {dst}")
+                debug_print(f"compare_files: Source directory: {src}")
+                debug_print(f"compare_files: Destination directory: {dst}")
             
                 manifest_file = "hazbackup.manifest"
                 manifest_file_path = os.path.normpath(os.path.join(src, manifest_file))
-                debug_print(f"Manifest file path: {manifest_file_path}")
+                debug_print(f"compare_files: Manifest file path: {manifest_file_path}")
             
                 if os.path.exists(manifest_file_path):
-                    debug_print(f"Manifest file already exists for source directory: {src}")
+                    debug_print(f"compare_files: Manifest file already exists for source directory: {src}")
                 else:
-                    debug_print(f"No manifest file found for source directory: {src}")
+                    debug_print(f"compare_files: No manifest file found for source directory: {src}")
                     # Start Initial Backup
                     initial_backup(src, dst, manifest_file_path)
     except Exception as e:
-        debug_print(f"Compare_File Fun: An error occurred while processing the file '{file_path}': {e}")
+        debug_print(f"compare_files: An error occurred while processing the file '{file_path}': {e}")
     
 
 
 def initial_backup(src, dst, manifest_file_path):
     dst = os.path.normpath(dst)
-    debug_print(f"Starting initial backup for source directory: {src}")
-    debug_print(f"Destination directory: {dst}")
+    debug_print(f"initial_backup: Starting initial backup for source directory: {src}")
+    debug_print(f"initial_backup: Destination directory: {dst}")
 
     # Check if the source directory exists
     if not os.path.exists(src):
-        debug_print(f"Source directory '{src}' does not exist.")
+        debug_print(f"initial_backup: Source directory '{src}' does not exist.")
         return
     
     # Check if the destination directory exists or create it
     if not os.path.exists(dst):
         os.makedirs(dst)
-        debug_print(f"Destination directory '{dst}' created.")
+        debug_print(f"initial_backup: Destination directory '{dst}' created.")
 
     # Initialize an empty list to store file paths
     file_list = []
@@ -230,13 +230,14 @@ def initial_backup(src, dst, manifest_file_path):
         for file in files:
             file_path = os.path.join(root, file)
             file_list.append(file_path)
-            debug_print(f"File path added: {file_path}")    
+            debug_print(f"initial_backup: File path added: {file_path}")
+    
     # Obtain File Info for storage in the manifest file
     file_info_list = []
     for file_path in file_list:
-        debug_print(f"Processing file in for loop: {file_path}")
+        debug_print(f"initial_backup: Processing file in for loop: {file_path}")
         file_info = get_file_info(file_path, "md5", src)
-        debug_print(f"File info: {file_info}")
+        debug_print(f"initial_backup: File info: {file_info}")
         if file_info:
             file_info_list.append(file_info)
             # Append file info to the manifest file
@@ -255,10 +256,11 @@ def initial_backup(src, dst, manifest_file_path):
                 # Write the updated data back to the JSON file
                 with open(manifest_file_path, mode='w') as manifest_file:
                     json.dump(existing_data, manifest_file, indent=4)
-                debug_print("File info appended to the manifest file.")
+                debug_print("initial_backup: File info appended to the manifest file.")
             except Exception as e:
-                debug_print(f"An error occurred while writing to the manifest file: {e}")
-        debug_print("Checking Input for add_backup:" + file_path +" | "+ dst +" | "+ file_info['RelativePath'])
+                debug_print(f"initial_backup: An error occurred while writing to the manifest file: {e}")
+                
+        debug_print("initial_backup: Checking Input for add_backup:" + file_path +" | "+ dst +" | "+ file_info['RelativePath'])
         add_backup(file_path, dst, file_info['RelativePath'], file_info['Hash'], file_info['Length'])
 
 def calculate_chunked_hash(file_stream, chunk_size=4096):
@@ -268,16 +270,16 @@ def calculate_chunked_hash(file_stream, chunk_size=4096):
     return hash_func.hexdigest()
 
 def add_backup(src, dst, relative_path, file_hash, file_length):
-    debug_print(f"Adding backup for file: {src}")
-    debug_print(f"Destination directory: {dst}")
-    debug_print(f"Relative path: {relative_path}")
+    debug_print(f"add_backup: Adding backup for file: {src}")
+    debug_print(f"add_backup: Destination directory: {dst}")
+    debug_print(f"add_backup: Relative path: {relative_path}")
 
     # Combine dst and relative_path to get the destination file path
     dst_file = os.path.join(dst, relative_path)
     
     # Check if the destination file already exists
     if os.path.exists(dst_file):
-        debug_print(f"Destination file '{dst_file}' already exists.")
+        debug_print(f"add_backup: Destination file '{dst_file}' already exists.")
         return
 
     # Handle long paths by using the \\?\ prefix
@@ -297,11 +299,11 @@ def add_backup(src, dst, relative_path, file_hash, file_length):
     # Compress the file if it meets the size and extension criteria
     # return the compressed file path
     current_working_file = compress_current_file(current_working_file, file_hash, file_length)
-    debug_print(f"Returning from compress_current_file: {current_working_file}")
+    debug_print(f"add_backup: Returning from compress_current_file: {current_working_file}")
     
     # Split the file if it exceeds 4GB
     current_working_file = split_current_file(current_working_file)
-    debug_print(f"Returning from split_current_file: {current_working_file}")
+    debug_print(f"add_backup: Returning from split_current_file: {current_working_file}")
 
     prepare_files_for_encryption(current_working_file)
 
@@ -313,17 +315,17 @@ def copy_current_file(src, current_working_file, file_hash):
     try:
         for attempt in range(4):
             shutil.copy2(src, current_working_file)
-            debug_print(f"File copied to destination: {current_working_file}")
+            debug_print(f"copy_current_file: File copied to destination: {current_working_file}")
 
             # Verify the hash of the copied file
             copied_hash = calculate_hash(current_working_file)
             if copied_hash == file_hash:
-                debug_print("Hash verification successful. File copied successfully.")
+                debug_print("copy_current_file: Hash verification successful. File copied successfully.")
                 break
             else:
-                debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
+                debug_print("copy_current_file: Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
     except Exception as e:
-        debug_print(f"An error occurred while copying the file: {e}")
+        debug_print(f"copy_current_file: An error occurred while copying the file: {e}")
     return
 
 def compress_current_file(current_working_file, file_hash, file_length):
@@ -335,7 +337,7 @@ def compress_current_file(current_working_file, file_hash, file_length):
         # If no file extension exists or the file starts with a dot, store current_working_file directly
         file_ext = '.' if os.path.basename(current_working_file).startswith('.') else "."
     # Check the size of the file
-    debug_print(f"File size: {file_length} bytes")
+    debug_print(f"compress_current_file: File size: {file_length} bytes")
 
     # Compress the file if it meets the size and extension criteria
     file_not_compress = ['jpeg', 'jpg', 'gif', 'png',
@@ -354,9 +356,9 @@ def compress_current_file(current_working_file, file_hash, file_length):
                         # Close the compression stream
                     f_out.close()
 
-                    debug_print(f"File compressed: {current_working_file}")
+                    debug_print(f"compress_current_file: File compressed: {current_working_file}")
             except Exception as e:
-                debug_print(f"An error occurred while compressing the file: {e}")
+                debug_print(f"compress_current_file: An error occurred while compressing the file: {e}")
                 continue
             try:
                 # Decompress the file into memory with chunking to verify integrity
@@ -366,18 +368,18 @@ def compress_current_file(current_working_file, file_hash, file_length):
                         decompressed_hash = calculate_chunked_hash(decompressed_file)
                         # Compare the decompressed hash with the original file hash
                         if decompressed_hash == file_hash:
-                            debug_print("Hash verification successful. Decompressed data matches the original file.")
+                            debug_print("compress_current_file: Hash verification successful. Decompressed data matches the original file.")
                             # Remove the original uncompressed file after successful compression
                             os.remove(current_working_file)
-                            debug_print(f"Original file removed: {current_working_file}")
+                            debug_print(f"compress_current_file: Original file removed: {current_working_file}")
                             current_working_file = current_working_file + ".xz"
                             break
                         else:
-                            debug_print("Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
+                            debug_print("compress_current_file: Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
             except Exception as e:
-                debug_print(f"An error occurred while decompressing or verifying the file: {e}")
+                debug_print(f"compress_current_file: An error occurred while decompressing or verifying the file: {e}")
     else:
-        debug_print("File size is less than 120 bytes or is a type that don't compress well. Skipping Compression.")
+        debug_print("compress_current_file: File size is less than 120 bytes or is a type that don't compress well. Skipping Compression.")
     return current_working_file
 
 def split_current_file(current_working_file):
@@ -393,33 +395,33 @@ def split_current_file(current_working_file):
     """
     # Get the size of the current file
     current_file_size = os.path.getsize(current_working_file)
-    debug_print(f"Current file size: {current_file_size} bytes")
+    debug_print(f"split_current_file: Current file size: {current_file_size} bytes")
     
     # Check if the file size exceeds 4GB
     if current_file_size > 4 * 1024 * 1024 * 1024:
         # Get the directory of the current file
         dst_file_dir = os.path.dirname(current_working_file)
-        debug_print(f"Directory Path: {dst_file_dir}")
+        debug_print(f"split_current_file: Directory Path: {dst_file_dir}")
         
         # Initialize the Split object with the current file and its directory
         split = Split(current_working_file, dst_file_dir)
         
         # Create the manifest file name by appending ".man" to the original file name
         splitManfile = os.path.basename(current_working_file) + ".man"
-        debug_print(f"Split Manifest File: {splitManfile}")
+        debug_print(f"split_current_file: Split Manifest File: {splitManfile}")
         
         # Set the manifest file name in the Split object
         split.manfilename = splitManfile
         
         # Split the file into chunks of 4GB each
         split.bysize(size=4 * 1024 * 1024 * 1024)
-        debug_print(f"File split into 4GB chunks: {current_working_file}")
+        debug_print(f"split_current_file: File split into 4GB chunks: {current_working_file}")
         
         # Return the path to the split manifest file
         current_working_file = os.path.join(dst_file_dir, splitManfile)
     else:
         # If the file size is less than or equal to 4GB, no splitting is done
-        print("Compressed file does not exist. Skipping splitting.")
+        print("split_current_file: Compressed file does not exist. Skipping splitting.")
     
     # Return the original file path if no splitting is done
     return current_working_file
@@ -428,7 +430,7 @@ def prepare_files_for_encryption(current_working_file):
     # Check if the .man file exists
     if current_working_file.endswith(".man"):
         man_file_path = current_working_file
-        debug_print(f"Manifest file '{man_file_path}' from the split command exists.")
+        debug_print(f"prepare_files_for_encryption: Manifest file '{man_file_path}' from the split command exists.")
 
         # Read the contents of the .man file
         with open(man_file_path, 'r') as man_file:
@@ -439,10 +441,10 @@ def prepare_files_for_encryption(current_working_file):
         filenames = [line.split(',')[0] for line in lines]
         current_working_list = []
         for filename in filenames:
-            debug_print(f"Current Value of filename: {filename}")
+            debug_print(f"prepare_files_for_encryption: Current Value of filename: {filename}")
             # Append the full file path to each filename
             full_file_path = os.path.join(os.path.dirname(current_working_file), filename)
-            debug_print(f"Full file path as created by the split manifest file: {full_file_path}")
+            debug_print(f"prepare_files_for_encryption: Full file path as created by the split manifest file: {full_file_path}")
             current_working_list.append(full_file_path)
 
         # Append .man file also
@@ -453,7 +455,7 @@ def prepare_files_for_encryption(current_working_file):
             encrypt_current_file(file)
 
     else :
-        debug_print(f"No Manifest file found moving onto encryption.")
+        debug_print(f"prepare_files_for_encryption: No Manifest file found moving onto encryption.")
         encrypt_current_file(current_working_file)
 
     return
@@ -504,7 +506,7 @@ def encrypt_current_file(current_working_file):
     
     # Get the optimal number of iterations
     iterations = get_optimal_iterations(password, salt)
-    debug_print(f"Optimal iterations: {iterations}")
+    debug_print(f"encrypt_current_file: Optimal iterations: {iterations}")
     
     # Derive the key using PBKDF2
     key = hashlib.pbkdf2_hmac('sha256', password, salt, iterations, dklen=16)  # AES-128 requires a 16-byte key
@@ -525,7 +527,7 @@ def encrypt_current_file(current_working_file):
     with open(encrypted_file_path, 'w') as encrypted_file:
         encrypted_file.write(result)
 
-    debug_print("File encrypted and saved to: " + encrypted_file_path)
+    debug_print("encrypt_current_file: File encrypted and saved to: " + encrypted_file_path)
     return
 
 def decrypt_current_file(encrypted_file_path):
@@ -561,7 +563,7 @@ def decrypt_current_file(encrypted_file_path):
     with open(decrypted_file_path, 'wb') as decrypted_file:
         decrypted_file.write(plaintext)
 
-    debug_print("File decrypted and saved to: " + decrypted_file_path)
+    debug_print("decrypt_current_file: File decrypted and saved to: " + decrypted_file_path)
 
 def main():
     pre_file_path = './config/pre-operations.csv'
