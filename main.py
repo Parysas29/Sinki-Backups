@@ -426,9 +426,9 @@ def split_current_file(current_working_file):
 
 def prepare_files_for_encryption(current_working_file):
     # Check if the .man file exists
-    man_file_path = current_working_file + ".man"
-    if os.path.exists(man_file_path):
-        debug_print(f"Manifest file '{man_file_path}' from the split command exist.")
+    if current_working_file.endswith(".man"):
+        man_file_path = current_working_file
+        debug_print(f"Manifest file '{man_file_path}' from the split command exists.")
 
         # Read the contents of the .man file
         with open(man_file_path, 'r') as man_file:
