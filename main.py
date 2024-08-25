@@ -337,27 +337,32 @@ def compress_current_file(current_working_file, file_hash, file_length):
                         shutil.copyfileobj(f_in, f_out)
                         # Close the compression stream
                     f_out.close()
-
                     debug_print(f"compress_current_file: File compressed: {current_working_file}")
             except Exception as e:
                 debug_print(f"compress_current_file: An error occurred while compressing the file: {e}")
                 continue
             try:
-                # Decompress the file into memory with chunking to verify integrity
-                with open(current_working_file + ".xz", "rb") as compressed_file:
-                    with lzma.open(compressed_file, "rb") as decompressed_file:
-                        # Calculate hash from decompressed data in chunks
-                        decompressed_hash = calculate_chunked_hash(decompressed_file)
-                        # Compare the decompressed hash with the original file hash
-                        if decompressed_hash == file_hash:
-                            debug_print("compress_current_file: Hash verification successful. Decompressed data matches the original file.")
-                            # Remove the original uncompressed file after successful compression
-                            os.remove(current_working_file)
-                            debug_print(f"compress_current_file: Original file removed: {current_working_file}")
-                            current_working_file = current_working_file + ".xz"
-                            break
-                        else:
-                            debug_print("compress_current_file: Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
+                if file_length > 1 * 1024 * 1024 * 1024:
+                    # Decompress the file into memory with chunking to verify integrity
+                    with open(current_working_file + ".xz", "rb") as compressed_file:
+                        with lzma.open(compressed_file, "rb") as decompressed_file:
+                            # Calculate hash from decompressed data in chunks
+                            decompressed_hash = calculate_chunked_hash(decompressed_file)
+                            # Compare the decompressed hash with the original file hash
+                            if decompressed_hash == file_hash:
+                                debug_print("compress_current_file: Hash verification successful. Decompressed data matches the original file.")
+                                # Remove the original uncompressed file after successful compression
+                                os.remove(current_working_file)
+                                debug_print(f"compress_current_file: Original file removed: {current_working_file}")
+                                current_working_file = current_working_file + ".xz"
+                                break
+                            else:
+                                debug_print("compress_current_file: Hash verification failed. Retrying... (Attempt {})".format(attempt + 1))
+                else:
+                    debug_print("compress_current_file: File size is less than 1GB. Skipping decompression verification.")
+                    os.remove(current_working_file)
+                    current_working_file = current_working_file + ".xz"
+                    break
             except Exception as e:
                 debug_print(f"compress_current_file: An error occurred while decompressing or verifying the file: {e}")
     else:
@@ -513,37 +518,44 @@ def encrypt_current_file(current_working_file):
     with open(encrypted_file_path, 'w') as encrypted_file:
         encrypted_file.write(result)
 
-    
 
-# Decrypt the file to verify
-    try:
-        with open(encrypted_file_path, 'r', encoding='utf-8') as encrypted_file:
-            encrypted_data = json.load(encrypted_file)
-        
-        nonce = b64decode(encrypted_data['nonce'])
-        header = b64decode(encrypted_data['header'])
-        ciphertext = b64decode(encrypted_data['ciphertext'])
-        tag = b64decode(encrypted_data['tag'])
-        salt = b64decode(encrypted_data['salt'])
-        iterations = encrypted_data['iterations']
+    # Check the file size
+    file_size = os.path.getsize(current_working_file)
+    if file_size > 1 * 1024 * 1024 * 1024:  # 1GB in bytes
+        # Decrypt the file to verify
+        try:
+            with open(encrypted_file_path, 'r', encoding='utf-8') as encrypted_file:
+                encrypted_data = json.load(encrypted_file)
+            
+            nonce = b64decode(encrypted_data['nonce'])
+            header = b64decode(encrypted_data['header'])
+            ciphertext = b64decode(encrypted_data['ciphertext'])
+            tag = b64decode(encrypted_data['tag'])
+            salt = b64decode(encrypted_data['salt'])
+            iterations = encrypted_data['iterations']
 
-        key = hashlib.pbkdf2_hmac('sha256', password, salt, iterations, dklen=16)
-        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-        cipher.update(header)
-        decrypted_plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+            key = hashlib.pbkdf2_hmac('sha256', password, salt, iterations, dklen=16)
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            cipher.update(header)
+            decrypted_plaintext = cipher.decrypt_and_verify(ciphertext, tag)
 
-        # Calculate the MD5 hash of the decrypted data
-        decrypted_hash = hashlib.md5(decrypted_plaintext).hexdigest()
-        debug_print(f"encrypt_current_file: Decrypted file hash: {decrypted_hash}")
+            # Calculate the MD5 hash of the decrypted data using calculate_chunked_hash
+            from io import BytesIO
+            decrypted_stream = BytesIO(decrypted_plaintext)
+            decrypted_hash = calculate_chunked_hash(decrypted_stream)
+            debug_print(f"encrypt_current_file: Decrypted file hash: {decrypted_hash}")
 
-        # Verify the integrity of the decrypted data
-        if original_hash == decrypted_hash:
-            debug_print("encrypt_current_file: File integrity verified. Deleting original file.")
-            os.remove(current_working_file)
-        else:
-            debug_print("encrypt_current_file: File integrity verification failed.")
-    except Exception as e:
-        debug_print(f"encrypt_current_file: An error occurred while decrypting or verifying the file: {e}")
+            # Verify the integrity of the decrypted data
+            if original_hash == decrypted_hash:
+                debug_print("encrypt_current_file: File integrity verified. Deleting original file.")
+                os.remove(current_working_file)
+            else:
+                debug_print("encrypt_current_file: File integrity verification failed.")
+        except Exception as e:
+            debug_print(f"encrypt_current_file: An error occurred while decrypting or verifying the file: {e}")
+    else:
+        debug_print("encrypt_current_file: File size is less than 1GB, skipping decryption verification.")
+        os.remove(current_working_file)
 
     debug_print("encrypt_current_file: File encrypted and saved to: " + encrypted_file_path)
     return encrypted_file_path
