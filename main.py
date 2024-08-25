@@ -264,10 +264,11 @@ def initial_backup(src, dst, manifest_file_path):
         add_backup(file_path, dst, file_info['RelativePath'], file_info['Hash'], file_info['Length'])
 
 def calculate_chunked_hash(file_stream, chunk_size=4096):
-    hash_func = hashlib.md5()  # You can use any hash function like md5, sha256, etc.
+    # Calculate the hash of the file in chunks
+    hash_object = hashlib.md5()
     for chunk in iter(lambda: file_stream.read(chunk_size), b""):
-        hash_func.update(chunk)
-    return hash_func.hexdigest()
+        hash_object.update(chunk)
+    return hash_object.hexdigest()
 
 def add_backup(src, dst, relative_path, file_hash, file_length):
     debug_print(f"add_backup: Adding backup for file: {src}")
@@ -493,6 +494,10 @@ def get_optimal_iterations(password, salt, target_time_ms=25):
 
 def encrypt_current_file(current_working_file):
     debug_print("encrypt_current_file: " + current_working_file)
+
+    # Calculate the MD5 hash of the original file
+    original_hash = calculate_hash(current_working_file)
+    debug_print(f"encrypt_current_file: Original file hash: {original_hash}")
     
     # Read the contents of the file
     with open(current_working_file, 'rb') as file:
@@ -527,8 +532,40 @@ def encrypt_current_file(current_working_file):
     with open(encrypted_file_path, 'w') as encrypted_file:
         encrypted_file.write(result)
 
+    
+
+# Decrypt the file to verify
+    try:
+        with open(encrypted_file_path, 'r', encoding='utf-8') as encrypted_file:
+            encrypted_data = json.load(encrypted_file)
+        
+        nonce = b64decode(encrypted_data['nonce'])
+        header = b64decode(encrypted_data['header'])
+        ciphertext = b64decode(encrypted_data['ciphertext'])
+        tag = b64decode(encrypted_data['tag'])
+        salt = b64decode(encrypted_data['salt'])
+        iterations = encrypted_data['iterations']
+
+        key = hashlib.pbkdf2_hmac('sha256', password, salt, iterations, dklen=16)
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        cipher.update(header)
+        decrypted_plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+
+        # Calculate the MD5 hash of the decrypted data
+        decrypted_hash = hashlib.md5(decrypted_plaintext).hexdigest()
+        debug_print(f"encrypt_current_file: Decrypted file hash: {decrypted_hash}")
+
+        # Verify the integrity of the decrypted data
+        if original_hash == decrypted_hash:
+            debug_print("encrypt_current_file: File integrity verified. Deleting original file.")
+            os.remove(current_working_file)
+        else:
+            debug_print("encrypt_current_file: File integrity verification failed.")
+    except Exception as e:
+        debug_print(f"encrypt_current_file: An error occurred while decrypting or verifying the file: {e}")
+
     debug_print("encrypt_current_file: File encrypted and saved to: " + encrypted_file_path)
-    return
+    return encrypted_file_path
 
 def decrypt_current_file(encrypted_file_path):
     debug_print("decrypt_current_file: " + encrypted_file_path)
