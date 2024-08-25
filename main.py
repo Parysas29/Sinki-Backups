@@ -1,48 +1,12 @@
 """ ToDo:
-1. Create initial backup script.
-   - Operations will be determined by a CSV file with the following fields:
-     1. Operation type
-     2. Source directory
-     3. Destination directory
+    1. Implement Strategic Checks instead of verifying each file after every operation.
+       It would be best if I only spot tested files that are more likely to experience issues.
+       larger files are more likely to have issues than smaller files.
+    2. Add other backup operations
+    3. Implment Restore Code
+    4. Implement Full Integrity Check
+    5. Create a CUI for the program
 
-2. Perform initial rclone operations on cloud services:
-   - Run "rclone dedupe rename" for Google Drive files.
-   - Sync all cloud locations to the main storage drive.
-
-3. On the main storage drive:
-   - Assign md5sum hashes to all files (if not already present).
-   - Compress files and split archives if larger than 4GB.
-   - Encrypt compressed files using AES-256-GCM.
-   - Perform secure erase on unencrypted files post-processing.
-
-4. On the main storage drive, use md5 hashes to:
-   - Detect modified files for backup updates.
-   - Identify deleted or newly added files.
-
-Additional Steps:
-5. Logging and Notifications:
-   - Implement detailed logging for each operation (start time, end time, success/failure, error messages).
-   - Set up notifications (email, SMS, etc.) for operation statuses.
-
-6. Error Handling and Recovery:
-   - Define error handling mechanisms (retries, alerts).
-   - Create a recovery plan for failed operations (manual intervention steps).
-
-7. Scheduling and Automation:
-   - Schedule the script to run at regular intervals using Task Scheduler.
-   - Ensure the script can handle incremental backups efficiently.
-
-8. Security Considerations:
-   - Securely store encryption keys (e.g., use a key management service).
-   - Ensure secure transfer of data (e.g., use SFTP/HTTPS for remote transfers).
-
-9. Verification and Integrity Checks:
-   - Regularly verify backup integrity (e.g., periodic test restores).
-   - Compare md5 hashes to ensure file integrity post-backup.
-
-10. Documentation:
-    - Maintain up-to-date documentation for the script (usage, configuration, troubleshooting).
-    - Include version control for the script and associated files.
  """
 import csv
 import lzma
