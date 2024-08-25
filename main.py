@@ -3,9 +3,23 @@
        It would be best if I only spot tested files that are more likely to experience issues.
        larger files are more likely to have issues than smaller files.
     2. Add other backup operations
+       a. Delete files that are not in the source directory
+          As versioning will be implemented files will only be marked for deletion. By adding .del to the file name.
+          After a certain period of time, the files will be deleted.
+       b. Update files that have been modified
+          As versioning will be implemented the current file in the backup location will get .ver1,2,3 appended to the file name.
+          3 versions will be kept at all times, unless the version is older than 30 days... then it will be deleted.
+       c. Add new files that didn't exist before
     3. Implment Restore Code
     4. Implement Full Integrity Check
     5. Create a CUI for the program
+       The CUI should have a menu that allows the user to select the operation they want to perform.
+       Currently the plan is to have the following options:
+        a. Backup
+        b. Restore
+        c. Check
+        d. get_optimal_iterations that allow the user to set the time in milliseconds for the key derivation function.
+        e. Exit
 
  """
 import csv
@@ -161,6 +175,9 @@ def compare_files(file_path):
                 debug_print(f"compare_files: Manifest file path: {manifest_file_path}")
             
                 if os.path.exists(manifest_file_path):
+                    # If the manifest file exists, pull the data from it, and create a new manifest file into memory from the source directory.
+                    # Compare the two lists and then perform the necessary operations.
+                    # Delete files that are not in the manifest file
                     debug_print(f"compare_files: Manifest file already exists for source directory: {src}")
                 else:
                     debug_print(f"compare_files: No manifest file found for source directory: {src}")
