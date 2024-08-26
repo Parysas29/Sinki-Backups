@@ -1,7 +1,4 @@
 """ ToDo:
-    1. Implement Strategic Checks instead of verifying each file after every operation.
-       It would be best if I only spot tested files that are more likely to experience issues.
-       larger files are more likely to have issues than smaller files.
     2. Add other backup operations
        a. Delete files that are not in the source directory
           As versioning will be implemented files will only be marked for deletion. By adding .del to the file name.
