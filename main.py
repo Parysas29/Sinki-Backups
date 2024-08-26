@@ -36,6 +36,9 @@ from datetime import datetime
 DEBUG = True  # Set this to False to disable debug messages
 
 def debug_print(message):
+    # Create the logs directory if it doesn't exist
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
     log_file_path = "./logs/debug.log"  # Specify the path to your log file
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # Get the current timestamp
 
