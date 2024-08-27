@@ -460,7 +460,10 @@ def split_current_file(current_working_file):
         # Split the file into chunks of 4GB each
         split.bysize(size=4 * 1024 * 1024 * 1024)
         debug_print(f"split_current_file: File split into 4GB chunks: {current_working_file}")
-        
+
+        # Delete the file that is defined by current_working_file
+        os.remove(current_working_file)
+        debug_print(f"split_current_file: File deleted: {current_working_file}")
         # Return the path to the split manifest file
         current_working_file = os.path.join(dst_file_dir, splitManfile)
     else:
