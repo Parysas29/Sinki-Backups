@@ -158,27 +158,55 @@ def compare_files(file_path):
             reader = csv.DictReader(file)
             
             # Print the headers to debug
-            headers = reader.fieldnames
-            debug_print(f"compare_files: CSV Headers: {headers}")
+            #headers = reader.fieldnames
+            #debug_print(f"compare_files: CSV Headers: {headers}")
 
             for row in reader:
                 # Print the current row to debug
-                debug_print(f"compare_files: Current row: {row}")
+                #debug_print(f"compare_files: Current row: {row}")
             
                 src = row.get('src', '').strip()
                 dst = row.get('dst', '').strip()
-                debug_print(f"compare_files: Source directory: {src}")
-                debug_print(f"compare_files: Destination directory: {dst}")
+                #debug_print(f"compare_files: Source directory: {src}")
+                #debug_print(f"compare_files: Destination directory: {dst}")
             
                 manifest_file = "hazbackup.manifest"
                 manifest_file_path = os.path.normpath(os.path.join(src, manifest_file))
                 debug_print(f"compare_files: Manifest file path: {manifest_file_path}")
             
                 if os.path.exists(manifest_file_path):
-                    # If the manifest file exists, pull the data from it, and create a new manifest file into memory from the source directory.
-                    # Compare the two lists and then perform the necessary operations.
-                    # Delete files that are not in the manifest file
+                    # If the manifest file exists, pull the data from it into memory and pull a list of files in the source directory.
                     debug_print(f"compare_files: Manifest file already exists for source directory: {src}")
+
+                    # Read the manifest file
+                    with open(manifest_file_path, 'r') as manifest_file:
+                        manifest_data = json.load(manifest_file)
+                    debug_print(f"compare_files: Manifest data: {manifest_data}")
+                    
+                    # Create a list of files in the source directory
+                    source_files = collect_file_paths(src, exclude_file=os.path.basename(manifest_file_path))
+                    # Obtain file info for each file in the source directory`
+                    source_files_info = []
+                    for file_path in source_files:
+                        file_info = get_file_info(file_path, hash_algorithm='md5', src_dir=src)
+                        if file_info:
+                            source_files_info.append(file_info)
+                    debug_print(f"compare_files: File info list: {source_files_info}")
+
+
+
+                    # Compare manifest data and source files info
+                    diff_files = []
+                    for file_info in source_files_info:
+                        relative_path = file_info['RelativePath']
+                        manifest_file_info = manifest_data.get(relative_path)
+                        if manifest_file_info:
+                            if manifest_file_info['Hash'] != file_info['Hash'] or manifest_file_info['Length'] != file_info['Length']:
+                                diff_files.append(file_info)
+                        else:
+                            diff_files.append(file_info)
+                    debug_print(f"compare_files: Difference files: {diff_files}")
+
                 else:
                     debug_print(f"compare_files: No manifest file found for source directory: {src}")
                     # Start Initial Backup
@@ -220,7 +248,6 @@ def initial_backup(src, dst, manifest_file_path):
         file_info = get_file_info(file_path, "md5", src)
         debug_print(f"initial_backup: File info: {file_info}")
         if file_info:
-            file_info_list.append(file_info)
             # Append file info to the manifest file
             try:
                 # Read existing data from the JSON file
@@ -231,7 +258,7 @@ def initial_backup(src, dst, manifest_file_path):
                     existing_data = []
             
                 # Append new file info to the existing data
-                existing_data.extend(file_info_list)
+                existing_data.append(file_info)
 
             
                 # Write the updated data back to the JSON file
@@ -309,6 +336,27 @@ def copy_current_file(src, current_working_file, file_hash):
     except Exception as e:
         debug_print(f"copy_current_file: An error occurred while copying the file: {e}")
     return
+
+def collect_file_paths(directory, exclude_file=None):
+    """
+    Walk through the given directory and collect all file paths, excluding the specified file.
+    
+    Args:
+        directory (str): The directory to walk through.
+        exclude_file (str, optional): The file to exclude from the results.
+    
+    Returns:
+        list: A list of file paths.
+    """
+    file_paths = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if exclude_file and file == exclude_file:
+                continue
+            file_path = os.path.join(root, file)
+            file_paths.append(file_path)
+            debug_print(f"collect_file_paths: File path added: {file_path}")
+    return file_paths
 
 def compress_current_file(current_working_file, file_hash, file_length):
     file_ext = os.path.splitext(current_working_file)[1]
