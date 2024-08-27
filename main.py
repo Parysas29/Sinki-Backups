@@ -138,11 +138,15 @@ def get_file_info(file_path, hash_algorithm='md5', src_dir=None, dst_dir=None):
         # Get file length
         file_length = os.path.getsize(file_path)
 
+        # Get current time for lastTouchTime
+        last_touch_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         file_info = {
             "Hash": file_hash,
             "RelativePath": relative_path,
             "LastModificationTime": last_mod_time,
-            "Length": file_length
+            "Length": file_length,
+            "LastTouchTime": last_touch_time
         }
 
     except Exception as e:
@@ -151,9 +155,17 @@ def get_file_info(file_path, hash_algorithm='md5', src_dir=None, dst_dir=None):
 
     return file_info
 
+def remove_last_touch_time(file_info):
+    """Remove the LastTouchTime key from the file info dictionary."""
+    if 'LastTouchTime' in file_info:
+        file_info_copy = file_info.copy()
+        del file_info_copy['LastTouchTime']
+        return file_info_copy
+    return file_info
 
 def compare_files(file_path):
     try:
+        # Read the manifest file
         with open(file_path, mode='r', encoding='utf-8-sig') as file:
             reader = csv.DictReader(file)
             
@@ -162,30 +174,24 @@ def compare_files(file_path):
             #debug_print(f"compare_files: CSV Headers: {headers}")
 
             for row in reader:
-                # Print the current row to debug
-                #debug_print(f"compare_files: Current row: {row}")
-            
                 src = row.get('src', '').strip()
                 dst = row.get('dst', '').strip()
-                #debug_print(f"compare_files: Source directory: {src}")
-                #debug_print(f"compare_files: Destination directory: {dst}")
             
                 manifest_file = "hazbackup.manifest"
                 manifest_file_path = os.path.normpath(os.path.join(src, manifest_file))
                 debug_print(f"compare_files: Manifest file path: {manifest_file_path}")
-            
-                if os.path.exists(manifest_file_path):
-                    # If the manifest file exists, pull the data from it into memory and pull a list of files in the source directory.
-                    debug_print(f"compare_files: Manifest file already exists for source directory: {src}")
-
+                try:
                     # Read the manifest file
                     with open(manifest_file_path, 'r') as manifest_file:
-                        manifest_data = json.load(manifest_file)
-                    debug_print(f"compare_files: Manifest data: {manifest_data}")
-                    
-                    # Create a list of files in the source directory
+                        manifest_data_list = json.load(manifest_file)
+                    debug_print(f"compare_files: Manifest data: {manifest_data_list}")
+
+                    # Convert manifest data list to dictionary
+                    manifest_data = {file_info['RelativePath']: file_info for file_info in manifest_data_list}
+
+                    # Create a list of files in the source  
                     source_files = collect_file_paths(src, exclude_file=os.path.basename(manifest_file_path))
-                    # Obtain file info for each file in the source directory`
+                    # Obtain file info for each file in the source directory
                     source_files_info = []
                     for file_path in source_files:
                         file_info = get_file_info(file_path, hash_algorithm='md5', src_dir=src)
@@ -193,24 +199,28 @@ def compare_files(file_path):
                             source_files_info.append(file_info)
                     debug_print(f"compare_files: File info list: {source_files_info}")
 
-
-
                     # Compare manifest data and source files info
                     diff_files = []
                     for file_info in source_files_info:
                         relative_path = file_info['RelativePath']
                         manifest_file_info = manifest_data.get(relative_path)
                         if manifest_file_info:
-                            if manifest_file_info['Hash'] != file_info['Hash'] or manifest_file_info['Length'] != file_info['Length']:
+                            # Remove LastTouchTime before comparison
+                            file_info_no_touch = remove_last_touch_time(file_info)
+                            manifest_file_info_no_touch = remove_last_touch_time(manifest_file_info)
+                            if manifest_file_info_no_touch['Hash'] != file_info_no_touch['Hash'] or manifest_file_info_no_touch['Length'] != file_info_no_touch['Length']:
                                 diff_files.append(file_info)
                         else:
                             diff_files.append(file_info)
                     debug_print(f"compare_files: Difference files: {diff_files}")
 
-                else:
+                except FileNotFoundError:
                     debug_print(f"compare_files: No manifest file found for source directory: {src}")
                     # Start Initial Backup
                     initial_backup(src, dst, manifest_file_path)
+                except Exception as e:
+                    debug_print(f"compare_files: An error occurred while processing the file '{file_path}': {e}")
+
     except Exception as e:
         debug_print(f"compare_files: An error occurred while processing the file '{file_path}': {e}")
     
@@ -260,7 +270,6 @@ def initial_backup(src, dst, manifest_file_path):
                 # Append new file info to the existing data
                 existing_data.append(file_info)
 
-            
                 # Write the updated data back to the JSON file
                 with open(manifest_file_path, mode='w') as manifest_file:
                     json.dump(existing_data, manifest_file, indent=4)
