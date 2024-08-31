@@ -1,4 +1,4 @@
-Welcome to Sinki-Backups.
+# Welcome to Sinki-Backups.
 I started development on this project out of a need for a secure method to backup my files to offsite locations without fearing that unauthorized parties would not gain access to my personal data.
 ##This script performs the following operations
 ### Pre-Operations
