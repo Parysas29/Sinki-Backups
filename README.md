@@ -1,6 +1,6 @@
 # Welcome to Sinki-Backups.
 I started development on this project out of a need for a secure method to backup my files to offsite locations without fearing that unauthorized parties would not gain access to my personal data.
-##This script performs the following operations
+## This script performs the following operations
 ### Pre-Operations
 To bring files from off site locations like Google Drive or OneDrive into the backup process I have created my own custom wrapper around rclone to handle it operations for moving files to and from offsite locations.
 ### Main Process
