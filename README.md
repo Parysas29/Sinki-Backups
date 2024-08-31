@@ -26,4 +26,4 @@ While I still have a lot of unknown for version 2.0 and my current plans are sub
   d.	Bandwidth setting for rclone<br />
   e.	Setting the time in millisecond for pbkdf2 optimal iteration with option to disable it completely.<br />
 3.	Running all operations in ram before final copy onto the local backup drive.
-4.	Running a program that don’t use rclone in parallel. (Will be using rclone parallel feature for operations that depend on rclone.
+4.	Running the parts of the program that don’t use rclone in parallel. (Will be using rclone parallel feature for operations that depend on rclone.
