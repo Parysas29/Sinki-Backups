@@ -6,10 +6,10 @@ To bring files from off site locations like Google Drive or OneDrive into the ba
 ### Main Process
 The main process so far involves taking all of the files in the source directory and copying it to the backup directory while performing the following operations.
 Compress, Split (if over 4gb), encrypt, hashing
-*Compression: * right now all files over 120 bytes are being compressed into XZ format this allow crc64 hash to be embedded into the compressed file to help ensure file integrity, additionally files over 1GB in size will be uncompressed into memory to ensure that data didn’t get corrupted during the compression process.
-*Split: * As the plan is to prepare these files for offsite storage, I find it useful to have the files be split so that if the network connection become interrupted while transferring a large file the entire file won’t need to be retransferred to the offsite location.
-* Encryption: * For the encryption method I am employing AES-128-GCM encryption for it ability to verify the file upon dencryption.
-* Hashing: * While throughout the processing of these files I do use md5sum hashes internally I personally find md5 to be a perfectly fine hashing method within a controlled and known environment however once the file have been fully processed and ready to be transferred to an offsite location that where I will be employing sha256sum hashing as that the minimal standard I like to use while downloading files from untrusted locations.
+* **Compression**: * right now all files over 120 bytes are being compressed into XZ format this allow crc64 hash to be embedded into the compressed file to help ensure file integrity, additionally files over 1GB in size will be uncompressed into memory to ensure that data didn’t get corrupted during the compression process.
+* **Split**: * As the plan is to prepare these files for offsite storage, I find it useful to have the files be split so that if the network connection become interrupted while transferring a large file the entire file won’t need to be retransferred to the offsite location.
+* **Encryption**: * For the encryption method I am employing AES-128-GCM encryption for it ability to verify the file upon dencryption.
+* **Hashing**: * While throughout the processing of these files I do use md5sum hashes internally I personally find md5 to be a perfectly fine hashing method within a controlled and known environment however once the file have been fully processed and ready to be transferred to an offsite location that where I will be employing sha256sum hashing as that the minimal standard I like to use while downloading files from untrusted locations.
 ### Post-Operations
 This will involve the transferring of files to offsite locations, which this operation will be employed once again by using rclone for the transferring of these files.
 ## Restoring files
