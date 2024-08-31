@@ -20,10 +20,10 @@ Right now, as there are still a lot of unknown for me in software development, I
 While I still have a lot of unknown for version 2.0 and my current plans are subjective to change, I currently am planning/thinking about doing the following
 1.	Improve the code to follow best programming practices
 2.	Add more customization to allow people to choose the following settings
-a.	Files extensions not to compress
-b.	What size we split files at if any
-c.	Encryption method
-d.	Bandwidth setting for rclone
-e.	Setting the time in millisecond for pbkdf2 optimal iteration with option to disable it completely.
+  a.	Files extensions not to compress
+  b.	What size we split files at if any
+  c.	Encryption method
+  d.	Bandwidth setting for rclone
+  e.	Setting the time in millisecond for pbkdf2 optimal iteration with option to disable it completely.
 3.	Running all operations in ram before final copy onto the local backup drive.
 4.	Running a program that don’t use rclone in parallel. (Will be using rclone parallel feature for operations that depend on rclone.
