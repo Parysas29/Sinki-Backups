@@ -19,7 +19,7 @@ Right now, as there are still a lot of unknown for me in software development, I
 
 While I still have a lot of unknown for version 2.0 and my current plans are subjective to change, I currently am planning/thinking about doing the following
 1.	Improve the code to follow best programming practices
-2.	Add more customization to allow people to choose the following settings
+2.	Add more customization to allow people to choose the following settings. /n
   a.	Files extensions not to compress
   b.	What size we split files at if any
   c.	Encryption method
